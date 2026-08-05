@@ -1,6 +1,5 @@
 param(
-  [string]$RepositoryRoot = "D:\MelroseOS\GitHub\MelroseOS",
-  [switch]$AllowCleanOnly
+  [string]$RepositoryRoot = "D:\MelroseOS\GitHub\MelroseOS"
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,36 +8,69 @@ if (-not (Test-Path (Join-Path $RepositoryRoot ".git"))) {
   throw "MelroseOS Git repository not found."
 }
 
-$KnownStages = @{
-  "PROJECTS/CORE/src/D3-02-01_MultiAccountDeploymentRegistry.js" = @{
-    Stage = "G2/G3"
-    VerifyHint = "Run the matching G2 or G3 VERIFY BAT."
+function Get-SuggestedCommitMessage([string[]]$Paths) {
+  $joined = ($Paths -join " ").ToUpperInvariant()
+
+  if ($joined -match "LI-01_CORE") {
+    return "M1B: Add cross-project safety gate"
   }
-  "PROJECTS/CRM/src/CRM-06_SystemPermissionsManager.js" = @{
-    Stage = "G4"
-    VerifyHint = "Run 02_VERIFY_G4_RUNTIME_ACL.bat."
+
+  if ($joined -match "LI-06_INTAKEROUTER") {
+    return "M1C: Add canonical lead intake entry point"
   }
-  "PROJECTS/ARCHIVE/src/Engine_BackupManager.js" = @{
-    Stage = "G5"
-    VerifyHint = "Run 02_VERIFY_G5_BACKUP_RUNTIME.bat."
+
+  if ($joined -match "AE-05_ELIGIBILITYENGINE") {
+    return "M1A: Add canonical eligibility guard"
   }
-  "PROJECTS/CRM/src/AE-05_EligibilityEngine.js" = @{
-    Stage = "M1A"
-    VerifyHint = "Run 02_VERIFY_M1A_ELIGIBILITY_GUARD.bat."
+
+  if ($joined -match "CRM-06_SYSTEMPERMISSIONSMANAGER") {
+    return "G4: Add runtime ACL enforcement"
   }
+
+  if ($joined -match "ENGINE_BACKUPMANAGER") {
+    return "G5: Add backup runtime integration"
+  }
+
+  if ($joined -match "D3-02-01_MULTIACCOUNTDEPLOYMENTREGISTRY") {
+    return "Guardrail: Update account and vault runtime controls"
+  }
+
+  if ($joined -match "^TOOLS/| TOOLS/") {
+    return "Tooling: Update MelroseOS development tools"
+  }
+
+  return "MelroseOS: Commit verified stage"
 }
 
 Push-Location $RepositoryRoot
+
 try {
-  $status = git status --porcelain
+  $statusLines = @(git status --porcelain)
 
   if ($LASTEXITCODE -ne 0) {
     throw "Unable to read Git status."
   }
 
-  if (-not $status) {
+  if ($statusLines.Count -eq 0) {
     Write-Host "[PASS] Repository is clean."
+    Write-Host "You may run the next APPLY BAT."
     exit 0
+  }
+
+  $entries = @()
+
+  foreach ($line in $statusLines) {
+    if (-not $line) {
+      continue
+    }
+
+    $statusCode = $line.Substring(0, 2)
+    $path = $line.Substring(3).Trim()
+
+    $entries += [pscustomobject]@{
+      Status = $statusCode
+      Path = $path
+    }
   }
 
   Write-Host ""
@@ -47,128 +79,148 @@ try {
   git status --short
   Write-Host "------------------------------------------------------------"
 
-  $changedPaths = @()
-
-  foreach ($line in $status) {
-    if ($line.Length -ge 4) {
-      $path = $line.Substring(3).Trim()
-      $changedPaths += $path
+  $conflictEntries = @(
+    $entries | Where-Object {
+      $_.Status -match "U|AA|DD|AU|UA|DU|UD"
     }
+  )
+
+  if ($conflictEntries.Count -gt 0) {
+    Write-Host ""
+    Write-Host "[BLOCKED] Git merge conflicts are present."
+    Write-Host "Resolve conflicts before continuing."
+    exit 20
   }
 
-  $known = @()
-  $unknown = @()
-
-  foreach ($path in $changedPaths) {
-    if ($KnownStages.ContainsKey($path)) {
-      $known += [pscustomobject]@{
-        Path = $path
-        Stage = $KnownStages[$path].Stage
-        VerifyHint = $KnownStages[$path].VerifyHint
+  $projectGroups = @(
+    $entries |
+    ForEach-Object {
+      if ($_.Path -match "^PROJECTS/([^/]+)/") {
+        $Matches[1].ToUpperInvariant()
       }
-    } else {
-      $unknown += $path
+      elseif ($_.Path -match "^tools/") {
+        "TOOLS"
+      }
+      elseif ($_.Path -match "^docs/") {
+        "DOCS"
+      }
+      else {
+        "OTHER"
+      }
+    } |
+    Select-Object -Unique
+  )
+
+  if ($projectGroups.Count -gt 1) {
+    Write-Host ""
+    Write-Host "[BLOCKED] Changes span multiple areas:"
+    foreach ($group in $projectGroups) {
+      Write-Host (" - " + $group)
     }
+    Write-Host ""
+    Write-Host "Commit one completed stage at a time."
+    exit 21
   }
 
-  if ($unknown.Count -gt 0) {
-    Write-Host ""
-    Write-Host "[BLOCKED] Unknown or unrelated changes are present:"
-    foreach ($item in $unknown) {
-      Write-Host (" - " + $item)
-    }
-    Write-Host ""
-    Write-Host "Review these changes manually before continuing."
-    exit 2
-  }
-
-  if ($known.Count -ne 1) {
-    Write-Host ""
-    Write-Host "[BLOCKED] More than one recognized stage is pending."
-    Write-Host "Commit each stage separately to preserve clean rollback points."
-    exit 3
-  }
-
-  $stage = $known[0]
+  $paths = @($entries.Path)
+  $message = Get-SuggestedCommitMessage -Paths $paths
 
   Write-Host ""
-  Write-Host ("Detected pending stage: " + $stage.Stage)
-  Write-Host ("Changed file: " + $stage.Path)
-  Write-Host ("Verifier: " + $stage.VerifyHint)
+  Write-Host ("Detected area: " + $projectGroups[0])
+  Write-Host ("Changed files: " + $paths.Count)
+  Write-Host ("Suggested commit message: " + $message)
   Write-Host ""
-
-  if ($AllowCleanOnly) {
-    Write-Host "[BLOCKED] Repository must be clean for this operation."
-    exit 4
-  }
-
   Write-Host "Choose an action:"
   Write-Host "  1. Show full diff"
-  Write-Host "  2. Commit and push the verified stage"
-  Write-Host "  3. Show status only"
-  Write-Host "  4. Exit without changes"
+  Write-Host "  2. Commit and push verified changes"
+  Write-Host "  3. Restore all uncommitted changes"
+  Write-Host "  4. Show detailed Git status"
+  Write-Host "  5. Exit"
   Write-Host ""
 
   $choice = Read-Host "Selection"
 
   switch ($choice) {
     "1" {
-      git diff -- $stage.Path
-      exit 5
+      git diff
+      exit 10
     }
 
     "2" {
-      $confirmation = Read-Host ("Confirm that " + $stage.Stage + " verification PASSED? Type YES")
+      $verified = Read-Host "Did the matching VERIFY BAT pass? Type YES"
 
-      if ($confirmation -ne "YES") {
-        Write-Host "[CANCELLED] No Git changes made."
-        exit 6
+      if ($verified -ne "YES") {
+        Write-Host "[CANCELLED] Verification was not confirmed."
+        exit 11
       }
 
-      $messages = @{
-        "G2/G3" = "Guardrail: Commit verified account and vault runtime changes"
-        "G4" = "G4: Add runtime ACL enforcement"
-        "G5" = "G5: Add backup runtime integration"
-        "M1A" = "M1A: Add canonical eligibility guard"
+      $custom = Read-Host "Press Enter to use the suggested commit message, or type a custom message"
+
+      if ($custom) {
+        $message = $custom
       }
 
-      $message = $messages[$stage.Stage]
+      git add --all
 
-      git add -- $stage.Path
       if ($LASTEXITCODE -ne 0) {
         throw "git add failed."
       }
 
       git commit -m $message
+
       if ($LASTEXITCODE -ne 0) {
         throw "git commit failed."
       }
 
       git push
+
       if ($LASTEXITCODE -ne 0) {
         throw "git push failed."
       }
 
-      $remaining = git status --porcelain
+      $remaining = @(git status --porcelain)
 
-      if ($remaining) {
-        Write-Host "[WARNING] Commit succeeded, but the repository is still not clean."
+      if ($remaining.Count -gt 0) {
+        Write-Host "[WARNING] Commit and push completed, but changes remain:"
         git status --short
-        exit 7
+        exit 12
       }
 
-      Write-Host "[SUCCESS] Verified stage committed and pushed."
+      Write-Host "[SUCCESS] Verified changes committed and pushed."
+      Write-Host "Repository is clean."
       exit 0
     }
 
     "3" {
+      Write-Host ""
+      Write-Host "WARNING: This will discard ALL uncommitted changes shown above."
+      $confirm = Read-Host "Type RESTORE to continue"
+
+      if ($confirm -ne "RESTORE") {
+        Write-Host "[CANCELLED] No files were restored."
+        exit 13
+      }
+
+      git restore --staged .
+      git restore .
+      git clean -fd
+
+      if ($LASTEXITCODE -ne 0) {
+        throw "Restore operation failed."
+      }
+
+      Write-Host "[SUCCESS] Uncommitted changes were discarded."
+      exit 0
+    }
+
+    "4" {
       git status
-      exit 8
+      exit 14
     }
 
     default {
       Write-Host "[EXIT] No changes made."
-      exit 9
+      exit 15
     }
   }
 }
