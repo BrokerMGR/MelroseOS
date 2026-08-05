@@ -359,3 +359,217 @@ function AE_testEligibilityEngine() {
 
   return true;
 }
+
+// BEGIN MOS5-M1A-CANONICAL-ELIGIBILITY v1.0.0
+const MOS5_M1A_ELIGIBILITY_VERSION = "1.0.0";
+
+/**
+ * Canonical, fail-closed eligibility entry point for production lead routing.
+ *
+ * This wrapper does not assign a lead. It only evaluates whether the existing
+ * eligibility engine is ready and returns normalized candidates.
+ *
+ * @param {Object} lead
+ * @return {Object}
+ */
+function MOS5M1A_evaluateLeadEligibility(lead) {
+  const normalizedLead = MOS5M1A_normalizeEligibilityLead_(lead);
+  const safety = MOS5M1A_getEligibilitySafetyState_();
+
+  if (!safety.routingAllowed) {
+    return {
+      success: false,
+      status: "ROUTING_PAUSED",
+      lead: normalizedLead,
+      eligibleAgents: [],
+      brokerFallbackRequired: true,
+      productionChanged: false,
+      evaluatedAt: new Date().toISOString()
+    };
+  }
+
+  if (typeof AE_evaluateEligibility !== "function") {
+    throw new Error("Canonical function AE_evaluateEligibility is unavailable.");
+  }
+
+  const rawResult = AE_evaluateEligibility(normalizedLead);
+  const candidates = MOS5M1A_extractEligibleAgents_(rawResult);
+
+  const recruiting = normalizedLead.leadType === "RECRUITING";
+
+  return {
+    success: true,
+    status: recruiting
+      ? "BROKER_ONLY_REQUIRED"
+      : (candidates.length ? "ELIGIBLE_AGENTS_FOUND" : "NO_ELIGIBLE_AGENT"),
+    lead: normalizedLead,
+    eligibleAgents: recruiting ? [] : candidates,
+    brokerFallbackRequired: recruiting || candidates.length === 0,
+    roundRobinAllowed: !recruiting && candidates.length > 0,
+    productionChanged: false,
+    evaluatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Normalizes the minimum fields used by the eligibility engine.
+ *
+ * @param {Object} lead
+ * @return {Object}
+ */
+function MOS5M1A_normalizeEligibilityLead_(lead) {
+  const input = lead || {};
+
+  const leadType = String(
+    input.leadType || input.LeadType || input.type || ""
+  ).trim().toUpperCase();
+
+  const parish = String(
+    input.parish || input.Parish || ""
+  ).trim().toUpperCase().replace(/\s+PARISH$/, "");
+
+  if (["BUYER", "SELLER", "RENTER", "RECRUITING"].indexOf(leadType) === -1) {
+    throw new Error("Unsupported leadType: " + leadType);
+  }
+
+  if (leadType !== "RECRUITING" && !parish) {
+    throw new Error("parish is required for non-recruiting leads.");
+  }
+
+  return Object.assign({}, input, {
+    leadType: leadType,
+    parish: parish
+  });
+}
+
+/**
+ * Extracts candidates from known eligibility-result shapes.
+ *
+ * @param {*} result
+ * @return {Array<Object>}
+ */
+function MOS5M1A_extractEligibleAgents_(result) {
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  if (!result || typeof result !== "object") {
+    return [];
+  }
+
+  const candidates =
+    result.eligibleAgents ||
+    result.candidates ||
+    result.agents ||
+    [];
+
+  return Array.isArray(candidates) ? candidates : [];
+}
+
+/**
+ * Reads routing safety state without activating routing.
+ *
+ * If the central control function is unavailable, the result fails closed.
+ *
+ * @return {Object}
+ */
+function MOS5M1A_getEligibilitySafetyState_() {
+  try {
+    if (typeof MOS5D32_checkRoutingGate_ === "function") {
+      const gate = MOS5D32_checkRoutingGate_();
+
+      return {
+        routingAllowed: Boolean(
+          gate === true ||
+          (gate && gate.allowed === true)
+        ),
+        source: "GLOBAL_SYSTEM_CONTROLS"
+      };
+    }
+  } catch (error) {
+    return {
+      routingAllowed: false,
+      source: "GLOBAL_SYSTEM_CONTROLS_ERROR",
+      error: String(error && error.message ? error.message : error)
+    };
+  }
+
+  return {
+    routingAllowed: false,
+    source: "FAIL_CLOSED_NO_GATE"
+  };
+}
+
+/**
+ * Read-only diagnostics for the canonical eligibility wrapper.
+ *
+ * @return {Object}
+ */
+function MOS5M1A_runEligibilityDiagnostics() {
+  const tests = [];
+
+  function add(code, passed, details) {
+    tests.push({
+      code: code,
+      status: passed ? "PASS" : "FAIL",
+      details: details
+    });
+  }
+
+  const buyer = MOS5M1A_normalizeEligibilityLead_({
+    leadType: "buyer",
+    parish: "St. Tammany Parish"
+  });
+
+  add(
+    "BUYER_NORMALIZATION",
+    buyer.leadType === "BUYER" &&
+      buyer.parish === "ST. TAMMANY",
+    "Buyer lead type and parish normalize correctly."
+  );
+
+  const recruiting = MOS5M1A_normalizeEligibilityLead_({
+    leadType: "recruiting"
+  });
+
+  add(
+    "RECRUITING_NO_PARISH",
+    recruiting.leadType === "RECRUITING" &&
+      recruiting.parish === "",
+    "Recruiting leads do not require a parish."
+  );
+
+  add(
+    "ARRAY_RESULT_SUPPORTED",
+    MOS5M1A_extractEligibleAgents_([{id: "A1"}]).length === 1,
+    "Array eligibility results are supported."
+  );
+
+  add(
+    "OBJECT_RESULT_SUPPORTED",
+    MOS5M1A_extractEligibleAgents_({
+      eligibleAgents: [{id: "A1"}]
+    }).length === 1,
+    "Object eligibility results are supported."
+  );
+
+  const failed = tests.filter(function(test) {
+    return test.status === "FAIL";
+  }).length;
+
+  const result = {
+    release: "MOS5-M1A-CANONICAL-ELIGIBILITY",
+    version: MOS5_M1A_ELIGIBILITY_VERSION,
+    overallStatus: failed ? "FAIL" : "PASS",
+    passed: tests.length - failed,
+    failed: failed,
+    tests: tests,
+    productionChanged: false,
+    routingActivated: false,
+    completedAt: new Date().toISOString()
+  };
+
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+// END MOS5-M1A-CANONICAL-ELIGIBILITY v1.0.0
