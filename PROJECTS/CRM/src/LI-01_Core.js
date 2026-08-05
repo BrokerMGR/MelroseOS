@@ -97,6 +97,19 @@ function LI_setupHeaders_(){
   );
 }
 
+function LI_checkIntakeGuard_(){
+  if(typeof MOS5D32_checkLeadIntakeGate_ === "function"){
+    return MOS5D32_checkLeadIntakeGate_();
+  }
+
+  return {
+    success:true,
+    gate:"LEAD_INTAKE",
+    status:"OPEN",
+    checkedAt:timestamp_()
+  };
+}
+
 function LI_setHeadersIfEmpty_(sheet,headers){
   if(!sheet)throw new Error("Required Lead Intake sheet is missing.");
 
@@ -122,6 +135,7 @@ function LI_setHeadersIfEmpty_(sheet,headers){
 
 function LI_receiveLead(payload){
   LI_initializeCore();
+  LI_checkIntakeGuard_();
 
   if(!payload)throw new Error("Lead payload is required.");
 

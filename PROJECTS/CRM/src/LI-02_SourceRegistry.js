@@ -10,8 +10,22 @@
 
 const LI_SOURCE_SHEET = "LI_SOURCE_REGISTRY";
 
+function LI_checkSourceRegistryGuard_(){
+  if(typeof MOS5D32_checkLeadIntakeGate_ === "function"){
+    return MOS5D32_checkLeadIntakeGate_();
+  }
+
+  return {
+    success:true,
+    gate:"SOURCE_REGISTRY",
+    status:"OPEN",
+    checkedAt:timestamp_()
+  };
+}
+
 function LI_initializeSourceRegistry() {
   LI_initializeCore();
+  LI_checkSourceRegistryGuard_();
 
   const ss = workbook_();
   const sheet = createSheetIfMissing_(ss, LI_SOURCE_SHEET);
@@ -36,6 +50,7 @@ function LI_initializeSourceRegistry() {
 
 function LI_upsertSource(source) {
   LI_initializeSourceRegistry();
+  LI_checkSourceRegistryGuard_();
 
   if (!source) throw new Error("Source record is required.");
 
@@ -178,6 +193,8 @@ function LI_applySourceDefaults(lead) {
 }
 
 function LI_setSourceActive(sourceId, active) {
+  LI_checkSourceRegistryGuard_();
+
   const row = LI_findSourceRow_("SourceID", sourceId);
 
   if (!row) throw new Error("Source not found: " + sourceId);

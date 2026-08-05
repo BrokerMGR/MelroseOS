@@ -13,8 +13,22 @@
  *   AE-01 through AE-10
  ******************************************************************************/
 
+function LI_checkQueueGuard_(){
+  if(typeof MOS5D32_checkRoutingGate_ === "function"){
+    return MOS5D32_checkRoutingGate_();
+  }
+
+  return {
+    success:true,
+    gate:"QUEUE_PROCESSING",
+    status:"OPEN",
+    checkedAt:timestamp_()
+  };
+}
+
 function LI_processIntakeQueue(limit) {
   LI_initializeDedupeEngine();
+  LI_checkQueueGuard_();
   AE_initializeConfig();
 
   const max = Math.max(1, Number(limit || 25));
@@ -71,6 +85,8 @@ function LI_processIntakeQueue(limit) {
 }
 
 function LI_processIntakeRecord_(intake) {
+  LI_checkQueueGuard_();
+
   const lead = {
     LeadID: String(intake.LeadID || "").trim() || LI_uuid_("LEAD"),
     CreatedAt: intake.ReceivedAt || timestamp_(),
@@ -202,6 +218,8 @@ function LI_setIntakeCell_(sheet, headers, row, headerName, value) {
 }
 
 function LI_retryFailedQueue(limit) {
+  LI_checkQueueGuard_();
+
   const max = Math.max(1, Number(limit || 25));
 
   const candidates = LI_sheetObjects_(LI.SHEETS.INTAKE)
