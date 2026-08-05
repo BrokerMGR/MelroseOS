@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#f4f6f9;--panel:#fff;--navy:#10233f;--navy2:#18375e;--text:#172033;--muted:#697386;--border:#e2e8f0;--shadow:0 12px 30px rgba(16,35,63,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+.app{display:grid;grid-template-columns:auto 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,var(--navy),#0b192d);color:#fff;padding:24px 18px;display:flex;flex-direction:column}
+.brand{padding:4px 10px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:18px}.brand h1{margin:0;font-size:21px;letter-spacing:.04em}.brand p{margin:6px 0 0;color:rgba(255,255,255,.65);font-size:12px}
+.nav{display:grid;gap:5px}.nav button{border:0;background:transparent;color:rgba(255,255,255,.78);text-align:left;padding:11px 12px;border-radius:9px;cursor:pointer;font-size:14px}.nav button:hover,.nav button.active{background:rgba(255,255,255,.11);color:#fff}.nav button:disabled{opacity:.38;cursor:not-allowed}
+.sidebar-footer{margin-top:auto;padding:14px 10px 0;color:rgba(255,255,255,.58);font-size:11px}.topbar{min-height:74px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:15px 28px}.topbar h2{margin:0;font-size:21px}.subline{color:var(--muted);font-size:12px;margin-top:4px}.identity{text-align:right;font-size:13px}.identity strong{display:block}.identity span{color:var(--muted)}
+.content{padding:26px 28px 38px}.hero{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;border-radius:16px;padding:26px;box-shadow:var(--shadow);margin-bottom:22px}.hero h3{margin:0 0 8px;font-size:23px}.hero p{margin:0;color:rgba(255,255,255,.75);max-width:760px;line-height:1.5}
+.status-strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.pill{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.12);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#50d890}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.widget{background:#fff;border:1px solid var(--border);border-radius:14px;min-height:230px;box-shadow:var(--shadow);overflow:hidden}.widget-head{padding:17px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.widget-head h4{margin:0;font-size:15px}.badge{padding:4px 8px;border-radius:999px;background:#f8fafc;font-size:11px;color:var(--muted)}.widget-body{padding:18px}.metric{font-size:34px;font-weight:750;color:var(--navy)}.metric-label{color:var(--muted);font-size:12px;margin-top:3px}.items{margin-top:18px;display:grid;gap:9px}.item{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-radius:9px;background:#f8fafc;font-size:12px}.item span:last-child{font-weight:700}.loading{color:var(--muted);padding:28px 18px;font-size:13px}.error{color:#b42318;background:#fff5f3;border-radius:8px;padding:10px;font-size:12px}
+@media(max-width:720px){.app{display:block}.sidebar{display:none}.grid{grid-template-columns:1fr}.content,.topbar{padding-left:16px;padding-right:16px}}
+.mos5-global-header{min-height:72px;display:flex;align-items:center;gap:16px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--border,#e2e8f0);position:sticky;top:0;z-index:30}.mos5-icon-button{width:40px;height:40px;border:1px solid var(--border,#e2e8f0);border-radius:10px;background:#fff;cursor:pointer;font-size:18px}.mos5-header-brand{display:flex;flex-direction:column;min-width:150px}.mos5-header-brand strong{font-size:15px;color:var(--navy,#10233f)}.mos5-header-brand span{font-size:12px;color:var(--muted,#697386);margin-top:3px}.mos5-header-search{flex:1;max-width:680px;display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:0 12px}.mos5-header-search input{width:100%;border:0;outline:none;background:transparent;padding:12px 0;font-size:14px}.mos5-header-search kbd{font-size:11px;color:var(--muted,#697386);border:1px solid var(--border,#e2e8f0);background:#fff;border-radius:6px;padding:3px 6px}.mos5-header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}.mos5-header-button{border:0;border-radius:10px;background:var(--navy,#10233f);color:#fff;padding:11px 14px;cursor:pointer;font-weight:700}.mos5-user-button{display:flex;align-items:center;gap:9px;border:0;background:transparent;cursor:pointer}.mos5-user-avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--navy,#10233f);color:#fff;font-size:12px;font-weight:700}.mos5-user-copy{display:flex;flex-direction:column;text-align:left}.mos5-user-copy strong{font-size:12px}.mos5-user-copy small{font-size:10px;color:var(--muted,#697386)}@media(max-width:900px){.mos5-user-copy,.mos5-header-search kbd{display:none}.mos5-header-brand{min-width:auto}}@media(max-width:680px){.mos5-global-header{flex-wrap:wrap}.mos5-header-search{order:3;flex-basis:100%;max-width:none}}
+</style></head><body>
+<div id="mos5-global-header" class="mos5-global-header">
+<button id="mos5-menu-toggle" class="mos5-icon-button">â˜°</button>
+<div class="mos5-header-brand"><strong>MelroseOS</strong><span id="mos5-header-breadcrumb">Dashboard</span></div>
+<div class="mos5-header-search"><input id="mos5-global-search" type="search" placeholder="Search leads, agents, listings, transactions..."><kbd>Ctrl K</kbd></div>
+<div class="mos5-header-actions"><button id="mos5-quick-create" class="mos5-header-button">+ Create</button><button id="mos5-notifications" class="mos5-icon-button">ðŸ””</button><button id="mos5-user-button" class="mos5-user-button"><span class="mos5-user-avatar">UB</span><span class="mos5-user-copy"><strong id="mos5-user-name">Broker</strong><small id="mos5-user-email"></small></span></button></div>
+</div>
+<div class="app"><?!= MOS5UI_include('MOS_UI_Sidebar'); ?>
+<main><header class="topbar"><div><h2 id="pageTitle">Dashboard</h2><div class="subline" id="workspaceLine">Initializing workspace...</div></div><div class="identity"><strong id="brokerName">Broker</strong><span id="brokerEmail"></span></div></header>
+<section class="content"><div class="hero"><h3>Brokerage operations at a glance</h3><p>This first application layer provides a broker-only command shell, live read-only summaries, and a permanent home for future MelroseOS modules.</p><div class="status-strip"><div class="pill"><span class="dot"></span>Read-only mode</div><div class="pill"><span class="dot"></span>Communications paused</div><div class="pill"><span class="dot"></span>Routing paused</div></div></div><div class="grid" id="widgetGrid"></div></section></main></div>
+<script>
+const state={bootstrap:null,activePage:'DASHBOARD'};
+document.addEventListener('DOMContentLoaded',()=>google.script.run.withSuccessHandler(onBootstrap).withFailureHandler(showFatal).MOS5BCC_getBootstrapData());
+function onBootstrap(data){state.bootstrap=data;brokerName.textContent=data.broker.displayName||'Broker';brokerEmail.textContent=data.broker.email||'';workspaceLine.textContent=data.workspace.workbookName+' Â· '+data.workspace.environment+' Â· '+data.workspace.mode;renderNavigation(data.navigation);renderWidgetShells(data.widgets);data.widgets.forEach(w=>google.script.run.withSuccessHandler(renderWidget).withFailureHandler(e=>renderWidgetError(w.code,e)).MOS5BCC_getWidgetData(w.code));}
+function renderNavigation(items){nav.innerHTML='';items.forEach(item=>{const b=document.createElement('button');b.textContent=item.label;b.disabled=!item.enabled;b.className=item.code===state.activePage?'active':'';b.onclick=()=>{if(!item.enabled)return;state.activePage=item.code;pageTitle.textContent=item.label;document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.textContent===item.label));};nav.appendChild(b);});}
+function renderWidgetShells(widgets){widgetGrid.innerHTML='';widgets.forEach(w=>{const c=document.createElement('article');c.className='widget';c.id='widget-'+w.code;c.innerHTML=`<div class="widget-head"><h4>${esc(w.title)}</h4><span class="badge">Loading</span></div><div class="loading">${esc(w.loadingText)}</div>`;widgetGrid.appendChild(c);});}
+function renderWidget(data){const c=document.getElementById('widget-'+data.code);if(!c)return;const items=(data.items||[]).map(i=>`<div class="item"><span>${esc(i.label)}</span><span>${esc(String(i.value))}</span></div>`).join('');c.innerHTML=`<div class="widget-head"><h4>${esc(data.title)}</h4><span class="badge">${esc(data.status)}</span></div><div class="widget-body"><div class="metric">${esc(String(data.primaryValue))}</div><div class="metric-label">${esc(data.secondaryValue||'')}</div><div class="items">${items}</div></div>`;}
+function renderWidgetError(code,error){const c=document.getElementById('widget-'+code);if(!c)return;c.innerHTML=`<div class="widget-head"><h4>${esc(code)}</h4><span class="badge">ERROR</span></div><div class="widget-body"><div class="error">${esc(error.message||String(error))}</div></div>`;}
+function showFatal(error){document.body.innerHTML=`<div style="padding:30px;font-family:Arial;color:#b42318"><h2>Broker Command Center could not start</h2><p>${esc(error.message||String(error))}</p></div>`;}
+function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');}
+</script><script>
+(function(){
+function byId(id){return document.getElementById(id);}
+function init(){
+const b=window.state&&window.state.bootstrap?window.state.bootstrap:null;
+if(b&&b.broker){if(byId('mos5-user-name'))byId('mos5-user-name').textContent=b.broker.displayName||'Broker';if(byId('mos5-user-email'))byId('mos5-user-email').textContent=b.broker.email||'';}
+const s=byId('mos5-global-search');
+if(s)s.addEventListener('input',function(){window.dispatchEvent(new CustomEvent('mos5:search',{detail:{query:this.value.trim()}}));});
+const q=byId('mos5-quick-create');if(q)q.onclick=()=>window.dispatchEvent(new CustomEvent('mos5:quick-create'));
+const n=byId('mos5-notifications');if(n)n.onclick=()=>window.dispatchEvent(new CustomEvent('mos5:notifications'));
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();if(s)s.focus();}});
+}
+window.MOS5Header={setBreadcrumb:function(label){const e=byId('mos5-header-breadcrumb');if(e)e.textContent=label||'Dashboard';},initialize:init};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+<?!= MOS5UI_include('MOS_UI_Workspace'); ?>
+<?!= MOS5UI_include('MOS_UI_Router'); ?>
+<?!= MOS5UI_include('MOS_UI_Components'); ?>
+<?!= MOS5UI_include('MOS_UI_Notifications'); ?>
+</body></html>
+
+
+

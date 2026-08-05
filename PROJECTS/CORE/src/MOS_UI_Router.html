@@ -1,0 +1,37 @@
+<style>
+.mos-route-workspace{display:none;padding:26px 28px 38px}.mos-route-workspace.active{display:block}.mos-route-page{display:grid;gap:18px}.mos-route-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;box-shadow:0 12px 30px rgba(16,35,63,.08)}.mos-route-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.mos-route-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px}.mos-route-kpi strong{display:block;font-size:26px;color:#10233f}.mos-route-kpi span{font-size:12px;color:#697386}
+@media(max-width:900px){.mos-route-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.mos-route-kpis{grid-template-columns:1fr}}
+</style>
+<section id="mos-route-workspace" class="mos-route-workspace"></section>
+<script>
+(function(){
+const defs={
+'crm/leads':['Leads','Search, filter, and manage brokerage leads.',['Total Leads','New Today','Needs Follow-up','Appointments']],
+'crm/buyers':['Buyers','Buyer pipeline and active client activity.',['Active Buyers','Consultations','Preapproved','Under Contract']],
+'crm/sellers':['Sellers','Seller opportunities, listings, and follow-up.',['Active Sellers','Consultations','Listings','Needs Follow-up']],
+'crm/pipeline':['CRM Pipeline','Brokerage-wide lead stages and conversion flow.',['New','Assigned','Working','Converted']],
+'listings/active':['Active Listings','Current active brokerage inventory.',['Active','Pending','Coming Soon','Price Changes']],
+'listings/off-market':['Off-Market Listings','Authorized off-market property inventory.',['Authorized','Available','Under Review','Expired']],
+'listings/featured':['Featured Listings','Published featured inventory.',['Featured','For Sale','For Lease','Needs Update']],
+'transactions/active':['Active Transactions','Open transaction files and milestones.',['Active Files','Closing Soon','Missing Items','Broker Review']],
+'transactions/compliance':['Compliance','Broker compliance review and document status.',['Pending Review','Missing Docs','Approved','Exceptions']],
+'transactions/calendar':['Transaction Calendar','Deadlines and closing dates.',['Today','This Week','Overdue','Upcoming Closings']],
+'agents/roster':['Agent Roster','Active brokerage agents and affiliation records.',['Active Agents','Accepting Leads','Inactive','Pending']],
+'agents/recruiting':['Agent Recruiting','Recruiting pipeline and consultations.',['New Prospects','Follow-up','Consultations','Affiliated']],
+'agents/capacity':['Agent Capacity','Lead availability and assignment readiness.',['Available','At Capacity','Paused','Broker Only']],
+'marketing/graphics':['Graphics','Brokerage graphics production.',['Drafts','Ready','Approved','Published']],
+'marketing/flyers':['Flyers','Property marketing and reports.',['Drafts','Ready','Published','Needs Update']],
+'marketing/social':['Social Media','Content queue and publishing status.',['Queued','Ready','Published','Failed']],
+'analytics':['Analytics','Brokerage performance reporting.',['Leads','Conversion','Volume','GCI']],
+'system':['System Health','Workbooks, releases, backups, and controls.',['Workbooks','Backups','Warnings','Failures']],
+'administration':['Administration','Settings, permissions, and broker controls.',['Users','Roles','Automations','Settings']]
+};
+function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function build(route){const d=defs[route]||['Workspace','Module registered and ready.',['Status','Records','Actions','Health']];return '<div class="mos-route-page"><div><h2>'+esc(d[0])+'</h2><p>'+esc(d[1])+'</p></div><div class="mos-route-kpis">'+d[2].map(x=>'<div class="mos-route-kpi"><strong>--</strong><span>'+esc(x)+'</span></div>').join('')+'</div><div class="mos-route-card"><strong>'+esc(d[0])+' workspace installed</strong><p>Live data and actions will be added next.</p></div></div>'}
+function nav(route,opt){route=String(route||'dashboard').replace(/^#\/?/,'');const dash=document.querySelector('section.content'),ws=document.getElementById('mos-route-workspace');if(!dash||!ws)return;if(route==='dashboard'){dash.style.display='';ws.classList.remove('active');ws.innerHTML=''}else{dash.style.display='none';ws.innerHTML=build(route);ws.classList.add('active')}if(window.MOS5Header&&MOS5Header.setBreadcrumb)MOS5Header.setBreadcrumb(route==='dashboard'?'Dashboard':(defs[route]?.[0]||'Workspace'));if(window.MOS5Sidebar&&MOS5Sidebar.setActiveRoute)MOS5Sidebar.setActiveRoute(route);if(!opt||opt.updateHistory!==false)history.pushState({route},'','#/'+route);window.dispatchEvent(new CustomEvent('mos5:route-changed',{detail:{route}}))}
+window.MOS5Router={navigate:nav,currentRoute:()=>location.hash.replace(/^#\/?/,'')||'dashboard',routes:defs};
+window.addEventListener('mos5:navigate',e=>nav(e.detail?.route||'dashboard'));
+window.addEventListener('popstate',()=>nav(location.hash.replace(/^#\/?/,'')||'dashboard',{updateHistory:false}));
+document.addEventListener('DOMContentLoaded',()=>nav(location.hash.replace(/^#\/?/,'')||'dashboard',{updateHistory:false}));
+})();
+</script>

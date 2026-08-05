@@ -1,0 +1,10 @@
+﻿{
+    "Version":  "1.0.0",
+    "Sprint":  1,
+    "PushRequired":  true,
+    "BackupRoot":  "D:\\MelroseOS_Storage\\Backups\\Sprint1-BCC-Shell-20260804-120203",
+    "Status":  "APPLIED_TO_WORKSPACE",
+    "Target":  "CORE",
+    "AppliedAt":  "2026-08-04T12:02:06",
+    "FeatureName":  "Broker Command Center Shell"
+}

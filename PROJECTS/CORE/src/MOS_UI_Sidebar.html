@@ -1,0 +1,41 @@
+<!-- MOS5 Sprint 2A.2 Sidebar -->
+<style>
+.mos-sidebar{width:264px;min-width:264px;height:100vh;position:sticky;top:0;display:flex;flex-direction:column;background:linear-gradient(180deg,#10233f 0%,#0b192d 100%);color:#fff;border-right:1px solid rgba(255,255,255,.08);transition:width .2s ease,min-width .2s ease;overflow:hidden}
+.mos-sidebar.collapsed{width:78px;min-width:78px}.mos-sidebar-brand{display:flex;align-items:center;gap:12px;min-height:76px;padding:0 18px;border-bottom:1px solid rgba(255,255,255,.1)}.mos-sidebar-logo{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#b9903d;color:#10233f;font-weight:800;flex:0 0 auto}.mos-sidebar-brand-copy{min-width:0}.mos-sidebar-brand-copy strong,.mos-sidebar-brand-copy span{display:block;white-space:nowrap}.mos-sidebar-brand-copy strong{font-size:15px;letter-spacing:.04em}.mos-sidebar-brand-copy span{margin-top:3px;font-size:11px;color:rgba(255,255,255,.6)}.mos-sidebar-toggle{margin-left:auto;width:34px;height:34px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}.mos-sidebar-nav{flex:1;overflow-y:auto;padding:14px 10px}.mos-nav-group{margin-bottom:8px}.mos-nav-group-button,.mos-nav-item{width:100%;min-height:42px;display:flex;align-items:center;gap:12px;border:0;border-radius:9px;background:transparent;color:rgba(255,255,255,.76);padding:9px 12px;cursor:pointer;text-align:left;font-size:13px}.mos-nav-group-button:hover,.mos-nav-item:hover,.mos-nav-item.active{background:rgba(255,255,255,.11);color:#fff}.mos-nav-icon{width:22px;min-width:22px;text-align:center;font-size:16px}.mos-nav-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mos-nav-chevron{margin-left:auto;font-size:11px;transition:transform .18s ease}.mos-nav-group.open .mos-nav-chevron{transform:rotate(90deg)}.mos-nav-children{display:none;padding:4px 0 4px 34px}.mos-nav-group.open .mos-nav-children{display:grid;gap:2px}.mos-nav-child{min-height:34px;border:0;border-radius:8px;background:transparent;color:rgba(255,255,255,.62);padding:7px 10px;cursor:pointer;text-align:left;font-size:12px}.mos-nav-child:hover,.mos-nav-child.active{background:rgba(255,255,255,.08);color:#fff}.mos-sidebar-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);font-size:11px;white-space:nowrap}.mos-sidebar.collapsed .mos-sidebar-brand-copy,.mos-sidebar.collapsed .mos-nav-label,.mos-sidebar.collapsed .mos-nav-chevron,.mos-sidebar.collapsed .mos-nav-children,.mos-sidebar.collapsed .mos-sidebar-footer{display:none}.mos-sidebar.collapsed .mos-sidebar-toggle{margin-left:0}.mos-sidebar.collapsed .mos-sidebar-brand{justify-content:center;padding:0 10px}.mos-sidebar.collapsed .mos-sidebar-logo{display:none}.mos-sidebar.collapsed .mos-nav-group-button,.mos-sidebar.collapsed .mos-nav-item{justify-content:center;padding:9px}@media(max-width:760px){.mos-sidebar{position:fixed;left:0;top:0;z-index:1000;transform:translateX(-100%);transition:transform .2s ease}.mos-sidebar.mobile-open{transform:translateX(0)}}
+</style>
+<aside id="mos-sidebar" class="mos-sidebar">
+  <div class="mos-sidebar-brand">
+    <div class="mos-sidebar-logo">M</div>
+    <div class="mos-sidebar-brand-copy">
+      <strong>MELROSEOS</strong>
+      <span>Broker Command Center</span>
+    </div>
+    <button id="mos-sidebar-toggle" class="mos-sidebar-toggle" type="button">☰</button>
+  </div>
+  <nav id="mos-sidebar-nav" class="mos-sidebar-nav"></nav>
+  <div class="mos-sidebar-footer">Sprint 2A.2 · Navigation Framework</div>
+</aside>
+<script>
+(function(){
+const key='mos5.sidebar.state.v1';
+const nav=[
+{code:'DASHBOARD',label:'Dashboard',icon:'⌂',route:'dashboard'},
+{code:'CRM',label:'CRM',icon:'◉',children:[{label:'Leads',route:'crm/leads'},{label:'Buyers',route:'crm/buyers'},{label:'Sellers',route:'crm/sellers'},{label:'Pipeline',route:'crm/pipeline'}]},
+{code:'LISTINGS',label:'Listings',icon:'⌂',children:[{label:'Active',route:'listings/active'},{label:'Off Market',route:'listings/off-market'},{label:'Featured',route:'listings/featured'}]},
+{code:'TRANSACTIONS',label:'Transactions',icon:'▣',children:[{label:'Active Files',route:'transactions/active'},{label:'Compliance',route:'transactions/compliance'},{label:'Calendar',route:'transactions/calendar'}]},
+{code:'AGENTS',label:'Agents',icon:'◎',children:[{label:'Roster',route:'agents/roster'},{label:'Recruiting',route:'agents/recruiting'},{label:'Capacity',route:'agents/capacity'}]},
+{code:'MARKETING',label:'Marketing',icon:'✦',children:[{label:'Graphics',route:'marketing/graphics'},{label:'Flyers',route:'marketing/flyers'},{label:'Social',route:'marketing/social'}]},
+{code:'ANALYTICS',label:'Analytics',icon:'▥',route:'analytics'},
+{code:'SYSTEM',label:'System Health',icon:'◌',route:'system'},
+{code:'ADMIN',label:'Administration',icon:'⚙',route:'administration'}];
+function state(){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch(e){return {}}}
+function save(v){localStorage.setItem(key,JSON.stringify(v))}
+function setActive(route){save({...state(),activeRoute:route});document.querySelectorAll('[data-route]').forEach(el=>el.classList.toggle('active',el.dataset.route===route))}
+function go(route,label){setActive(route);window.dispatchEvent(new CustomEvent('mos5:navigate',{detail:{route,label}}));if(window.MOS5Header&&window.MOS5Header.setBreadcrumb)window.MOS5Header.setBreadcrumb(label)}
+function render(){const s=document.getElementById('mos-sidebar'),n=document.getElementById('mos-sidebar-nav');if(!s||!n)return;const st=state();if(st.collapsed)s.classList.add('collapsed');n.innerHTML='';nav.forEach(item=>{if(item.children){const g=document.createElement('div');g.className='mos-nav-group';g.dataset.code=item.code;if((st.openGroups||[]).includes(item.code))g.classList.add('open');const p=document.createElement('button');p.className='mos-nav-group-button';p.innerHTML='<span class="mos-nav-icon">'+item.icon+'</span><span class="mos-nav-label">'+item.label+'</span><span class="mos-nav-chevron">›</span>';p.onclick=()=>{g.classList.toggle('open');save({...state(),openGroups:Array.from(n.querySelectorAll('.mos-nav-group.open')).map(x=>x.dataset.code)})};const c=document.createElement('div');c.className='mos-nav-children';item.children.forEach(ch=>{const b=document.createElement('button');b.className='mos-nav-child';b.textContent=ch.label;b.dataset.route=ch.route;b.onclick=()=>go(ch.route,ch.label);c.appendChild(b)});g.appendChild(p);g.appendChild(c);n.appendChild(g)}else{const b=document.createElement('button');b.className='mos-nav-item';b.dataset.route=item.route;b.innerHTML='<span class="mos-nav-icon">'+item.icon+'</span><span class="mos-nav-label">'+item.label+'</span>';b.onclick=()=>go(item.route,item.label);n.appendChild(b)}});setActive(st.activeRoute||'dashboard')}
+function toggle(){const s=document.getElementById('mos-sidebar');if(!s)return;s.classList.toggle('collapsed');save({...state(),collapsed:s.classList.contains('collapsed')})}
+function mobile(){const s=document.getElementById('mos-sidebar');if(s)s.classList.toggle('mobile-open')}
+window.MOS5Sidebar={render,setActiveRoute:setActive,toggleCollapsed:toggle,toggleMobile:mobile,navigation:nav};
+document.addEventListener('DOMContentLoaded',()=>{render();const t=document.getElementById('mos-sidebar-toggle');if(t)t.onclick=toggle;const h=document.getElementById('mos5-menu-toggle');if(h)h.onclick=mobile});
+})();
+</script>

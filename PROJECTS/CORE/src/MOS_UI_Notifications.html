@@ -1,0 +1,274 @@
+<!-- MOS5 Sprint 2A.6 Notifications -->
+<style>
+  .mos-notification-panel {
+    position: fixed;
+    top: 78px;
+    right: 18px;
+    width: min(420px, calc(100vw - 36px));
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--mos-color-border, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(10,20,35,.18);
+    z-index: 2500;
+    display: none;
+  }
+
+  .mos-notification-panel.open {
+    display: block;
+  }
+
+  .mos-notification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--mos-color-border, #e2e8f0);
+  }
+
+  .mos-notification-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--mos-color-navy, #10233f);
+  }
+
+  .mos-notification-header button {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--mos-color-muted, #697386);
+  }
+
+  .mos-notification-list {
+    display: grid;
+  }
+
+  .mos-notification-item {
+    display: grid;
+    grid-template-columns: 10px 1fr;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--mos-color-border, #e2e8f0);
+  }
+
+  .mos-notification-item:last-child {
+    border-bottom: 0;
+  }
+
+  .mos-notification-dot {
+    width: 9px;
+    height: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: #697386;
+  }
+
+  .mos-notification-dot.success { background: #19734a; }
+  .mos-notification-dot.warning { background: #9a6700; }
+  .mos-notification-dot.danger { background: #b42318; }
+  .mos-notification-dot.info { background: #2563eb; }
+
+  .mos-notification-copy strong {
+    display: block;
+    font-size: 13px;
+    color: var(--mos-color-text, #172033);
+  }
+
+  .mos-notification-copy p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--mos-color-muted, #697386);
+  }
+
+  .mos-notification-copy small {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  .mos-notification-empty {
+    padding: 28px 18px;
+    text-align: center;
+    color: var(--mos-color-muted, #697386);
+    font-size: 13px;
+  }
+
+  .mos-notification-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #b42318;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+</style>
+
+<section id="mos-notification-panel" class="mos-notification-panel" aria-hidden="true">
+  <div class="mos-notification-header">
+    <h3>Broker Notifications</h3>
+    <button id="mos-notification-close" type="button">Close</button>
+  </div>
+  <div id="mos-notification-list" class="mos-notification-list"></div>
+</section>
+
+<script>
+(function () {
+  const sampleNotifications = [
+    {
+      id: 'lead-followup',
+      tone: 'danger',
+      title: 'Lead follow-up required',
+      message: 'A lead has not been contacted within the expected response window.',
+      time: 'Broker attention'
+    },
+    {
+      id: 'compliance-review',
+      tone: 'warning',
+      title: 'Compliance review pending',
+      message: 'A transaction file is waiting for broker review.',
+      time: 'Open queue'
+    },
+    {
+      id: 'system-health',
+      tone: 'success',
+      title: 'System health passed',
+      message: 'All six MelroseOS workbooks are currently accessible.',
+      time: 'Latest health check'
+    }
+  ];
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function render(items) {
+    const list = byId('mos-notification-list');
+    if (!list) return;
+
+    const notifications = Array.isArray(items) ? items : [];
+
+    if (!notifications.length) {
+      list.innerHTML =
+        '<div class="mos-notification-empty">No broker notifications.</div>';
+      updateCount(0);
+      return;
+    }
+
+    list.innerHTML = notifications.map(function (item) {
+      return (
+        '<article class="mos-notification-item">' +
+          '<span class="mos-notification-dot ' +
+            escapeHtml(item.tone || 'info') +
+          '"></span>' +
+          '<div class="mos-notification-copy">' +
+            '<strong>' + escapeHtml(item.title || 'Notification') + '</strong>' +
+            '<p>' + escapeHtml(item.message || '') + '</p>' +
+            '<small>' + escapeHtml(item.time || '') + '</small>' +
+          '</div>' +
+        '</article>'
+      );
+    }).join('');
+
+    updateCount(notifications.length);
+  }
+
+  function updateCount(count) {
+    const button = byId('mos5-notifications') || byId('mos-notifications');
+    if (!button) return;
+
+    let badge = button.querySelector('.mos-notification-count');
+
+    if (!badge && count > 0) {
+      badge = document.createElement('span');
+      badge.className = 'mos-notification-count';
+      button.appendChild(badge);
+    }
+
+    if (badge) {
+      badge.textContent = String(count);
+      badge.style.display = count > 0 ? 'inline-grid' : 'none';
+    }
+  }
+
+  function open() {
+    const panel = byId('mos-notification-panel');
+    if (!panel) return;
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+  }
+
+  function close() {
+    const panel = byId('mos-notification-panel');
+    if (!panel) return;
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  function toggle() {
+    const panel = byId('mos-notification-panel');
+    if (!panel) return;
+    panel.classList.contains('open') ? close() : open();
+  }
+
+  window.MOS5Notifications = {
+    render,
+    open,
+    close,
+    toggle,
+    setItems: render,
+    getSample: function () {
+      return sampleNotifications.slice();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    render(sampleNotifications);
+
+    const headerButton = byId('mos5-notifications') || byId('mos-notifications');
+    const closeButton = byId('mos-notification-close');
+
+    if (headerButton) {
+      headerButton.addEventListener('click', toggle);
+    }
+
+    if (closeButton) {
+      closeButton.addEventListener('click', close);
+    }
+
+    window.addEventListener('mos5:notifications', toggle);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') close();
+    });
+
+    document.addEventListener('click', function (event) {
+      const panel = byId('mos-notification-panel');
+      const button = byId('mos5-notifications') || byId('mos-notifications');
+
+      if (!panel || !panel.classList.contains('open')) return;
+
+      if (!panel.contains(event.target) && (!button || !button.contains(event.target))) {
+        close();
+      }
+    });
+  });
+})();
+</script>

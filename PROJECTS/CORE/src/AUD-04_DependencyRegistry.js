@@ -1,0 +1,118 @@
+/** Auto-generated dependency registry for System Auditor v2. */
+const AUD2_DEPENDENCY_REGISTRY = {
+  "projects": {
+    "ANALYTICS": {
+      "literalSheetNames": [],
+      "getSheetNames": [],
+      "constantValues": [],
+      "crossWorkbookSheetNames": []
+    },
+    "ARCHIVE": {
+      "literalSheetNames": [],
+      "getSheetNames": [],
+      "constantValues": [],
+      "crossWorkbookSheetNames": []
+    },
+    "CORE": {
+      "literalSheetNames": [
+        "(",
+        ").",
+        ",",
+        "1Ml9wEEz_gi30i8Js3iMJeycYy_nnrVv6KYD22g9aVhc",
+        "1MnWLm3aK1D8KDmqNnkcsUmiBnFyjKlQcOtVwbeaMldo",
+        "1OMqOY9trsL0r46BY0tg023mpq9i3SpbX3kNSnMvZsPU",
+        "1QpgjJEMpW4wW_xNUY7S3EQh4yqvU8P1y2eNZ4oJlOq8",
+        "1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64",
+        "1uRai34TuOVNKKZ2TJKXkfaw03bd8uqlD8RQTALXv2lk",
+        "2.0.0",
+        ": constant/config value reference.",
+        ": cross-workbook sheet reference.",
+        ": getSheetByName reference.",
+        ": literal sheet-name reference.",
+        "AC_",
+        "AE_",
+        "AP_",
+        "ARCHIVE_SAFE",
+        "AUD2_",
+        "AUD2_CLEANUP_REVIEW",
+        "AUD2_DEPENDENCY_INVENTORY",
+        "AUD_",
+        "ApprovalStatus",
+        "ApprovedAt",
+        "ApprovedBy",
+        "AuditedAt",
+        "BACKUP_THEN_DELETE",
+        "CO_",
+        "Classification",
+        "Columns",
+        "Confidence",
+        "ConstantReference",
+        "CrossWorkbookReference",
+        "DELETE_SAFE",
+        "Dependency-Aware Auditor v2 failed.",
+        "Evidence",
+        "GetSheetReference",
+        "HIGH",
+        "HasData",
+        "KEEP_LOCKED",
+        "LI_",
+        "LOW",
+        "LiteralReference",
+        "MANUAL_REVIEW",
+        "MANUAL_REVIEW_ONLY",
+        "MEDIUM",
+        "NF_",
+        "OP_",
+        "PENDING_REVIEW",
+        "PROTECTED_ACTIVE",
+        "Protected MelroseOS module prefix.",
+        "ProtectedPrefix",
+        "REVIEW_THEN_ARCHIVE",
+        "RecommendedAction",
+        "ReferenceProjects",
+        "Rows",
+        "SHEET1",
+        "SheetName",
+        "SpreadsheetID",
+        "Trigger dependency:",
+        "TriggerRelated",
+        "UNKNOWN",
+        "Workbook",
+        "undefined",
+        "|"
+      ],
+      "getSheetNames": [],
+      "constantValues": [
+        "1Ml9wEEz_gi30i8Js3iMJeycYy_nnrVv6KYD22g9aVhc",
+        "1MnWLm3aK1D8KDmqNnkcsUmiBnFyjKlQcOtVwbeaMldo",
+        "1OMqOY9trsL0r46BY0tg023mpq9i3SpbX3kNSnMvZsPU",
+        "1QpgjJEMpW4wW_xNUY7S3EQh4yqvU8P1y2eNZ4oJlOq8",
+        "1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64",
+        "1uRai34TuOVNKKZ2TJKXkfaw03bd8uqlD8RQTALXv2lk",
+        "2.0.0",
+        "AUD2_CLEANUP_REVIEW",
+        "AUD2_DEPENDENCY_INVENTORY"
+      ],
+      "crossWorkbookSheetNames": []
+    },
+    "CRM": {
+      "literalSheetNames": [],
+      "getSheetNames": [],
+      "constantValues": [],
+      "crossWorkbookSheetNames": []
+    },
+    "MARKETING": {
+      "literalSheetNames": [],
+      "getSheetNames": [],
+      "constantValues": [],
+      "crossWorkbookSheetNames": []
+    },
+    "WEBSITE": {
+      "literalSheetNames": [],
+      "getSheetNames": [],
+      "constantValues": [],
+      "crossWorkbookSheetNames": []
+    }
+  },
+  "triggers": []
+};

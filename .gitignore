@@ -1,0 +1,15 @@
+﻿node_modules/
+.env
+.env.*
+*.log
+*.tmp
+*.bak
+.clasprc.json
+client_secret*.json
+credentials*.json
+token*.json
+oauth*.json
+Backups/
+Logs/
+Reports/
+Releases/
