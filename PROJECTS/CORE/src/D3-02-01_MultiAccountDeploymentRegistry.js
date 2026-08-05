@@ -1,5 +1,5 @@
 
-const MOS5D321_VERSION='1.1.0';
+const MOS5D321_VERSION='1.2.0';
 const MOS5D321={
   release:'MOS5-D3.2.1',
   coreWorkbookId:'1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64',
@@ -580,3 +580,362 @@ function MOS5D321_runRuntimeFailoverDiagnostics() {
   return result;
 }
 // END MOS5-G2-RUNTIME-FAILOVER v1.0.0
+
+// BEGIN MOS5-G3-VAULT-CAPACITY v1.0.0
+/**
+ * Records a broker-approved capacity snapshot for one registered vault.
+ *
+ * Google Apps Script cannot directly inspect storage quotas belonging to the
+ * other four authenticated accounts from the Core account. Each account must
+ * supply its own measured capacity snapshot. This function validates and
+ * records that snapshot in the central vault registry.
+ *
+ * @param {Object} snapshot
+ * @return {Object}
+ */
+function MOS5D321_recordVaultCapacitySnapshot(snapshot) {
+  MOS5D321_assertCore_();
+
+  const input = snapshot || {};
+  const vaultCode = String(input.vaultCode || '').trim().toUpperCase();
+  const usedBytes = Number(input.usedBytes);
+  const totalBytes = Number(input.totalBytes);
+  const measuredBy = String(
+    input.measuredBy || Session.getEffectiveUser().getEmail() || ''
+  ).trim().toLowerCase();
+  const source = String(input.source || 'MANUAL_CERTIFICATION')
+    .trim()
+    .toUpperCase();
+
+  if (!vaultCode) {
+    throw new Error('vaultCode is required.');
+  }
+
+  if (!Number.isFinite(usedBytes) || usedBytes < 0) {
+    throw new Error('usedBytes must be a nonnegative number.');
+  }
+
+  if (!Number.isFinite(totalBytes) || totalBytes <= 0) {
+    throw new Error('totalBytes must be greater than zero.');
+  }
+
+  if (usedBytes > totalBytes) {
+    throw new Error('usedBytes cannot exceed totalBytes.');
+  }
+
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(MOS5D321.vaults);
+
+  const rows = MOS5D321_getRows_(MOS5D321.vaults, 8);
+  const index = rows.findIndex(function(row) {
+    return String(row[1] || '').trim().toUpperCase() === vaultCode;
+  });
+
+  if (index < 0) {
+    throw new Error('Unknown vault code: ' + vaultCode);
+  }
+
+  const rowNumber = index + 2;
+  const percentage = totalBytes
+    ? Math.round((usedBytes / totalBytes) * 10000) / 100
+    : 0;
+
+  const status = MOS5D321_calculateCapacityStatus_(
+    usedBytes,
+    totalBytes
+  );
+
+  const usage = JSON.stringify({
+    usedBytes: usedBytes,
+    totalBytes: totalBytes,
+    freeBytes: totalBytes - usedBytes,
+    percentUsed: percentage,
+    measuredBy: measuredBy,
+    source: source,
+    measuredAt: new Date().toISOString()
+  });
+
+  sheet.getRange(rowNumber, 6).setValue(usage);
+  sheet.getRange(rowNumber, 7).setValue(status);
+  sheet.getRange(rowNumber, 8).setValue(new Date());
+
+  const result = {
+    success: true,
+    vaultCode: vaultCode,
+    usedBytes: usedBytes,
+    totalBytes: totalBytes,
+    freeBytes: totalBytes - usedBytes,
+    percentUsed: percentage,
+    capacityStatus: status,
+    availableForRuntimeWrites:
+      MOS5D321_isVaultCapacityAvailable_(status),
+    productionChanged: false,
+    routingChanged: false,
+    ownershipChanged: false,
+    completedAt: new Date().toISOString()
+  };
+
+  MOS5D321_audit_(
+    'VAULT_CAPACITY_SNAPSHOT_RECORDED',
+    vaultCode,
+    JSON.stringify(result)
+  );
+
+  return result;
+}
+
+/**
+ * Calculates the authoritative capacity state.
+ *
+ * Thresholds:
+ * - AVAILABLE: below 75%
+ * - WARNING: 75% through 89.99%
+ * - CRITICAL: 90% through 96.99%
+ * - FULL: 97% or greater
+ *
+ * @param {number} usedBytes
+ * @param {number} totalBytes
+ * @return {string}
+ */
+function MOS5D321_calculateCapacityStatus_(usedBytes, totalBytes) {
+  const used = Number(usedBytes);
+  const total = Number(totalBytes);
+
+  if (!Number.isFinite(used) || !Number.isFinite(total) || total <= 0) {
+    return 'NOT_MEASURED';
+  }
+
+  const percent = (used / total) * 100;
+
+  if (percent >= 97) {
+    return 'FULL';
+  }
+
+  if (percent >= 90) {
+    return 'CRITICAL';
+  }
+
+  if (percent >= 75) {
+    return 'WARNING';
+  }
+
+  return 'AVAILABLE';
+}
+
+/**
+ * Returns the current capacity summary for all registered vaults.
+ *
+ * @return {Object}
+ */
+function MOS5D321_getVaultCapacitySummary() {
+  MOS5D321_assertCore_();
+
+  const vaults = MOS5D321_getRuntimeVaults_();
+  const summary = vaults.map(function(vault) {
+    const usage = MOS5D321_parseVaultUsage_(vault.currentUsage);
+
+    return {
+      priority: vault.priority,
+      vaultCode: vault.vaultCode,
+      email: vault.email,
+      active: vault.active,
+      capacityStatus: vault.capacityStatus,
+      availableForRuntimeWrites:
+        vault.active &&
+        MOS5D321_isVaultCapacityAvailable_(vault.capacityStatus),
+      usage: usage
+    };
+  });
+
+  return {
+    success: true,
+    vaults: summary,
+    availableVaults: summary.filter(function(item) {
+      return item.availableForRuntimeWrites;
+    }).length,
+    unavailableVaults: summary.filter(function(item) {
+      return !item.availableForRuntimeWrites;
+    }).length,
+    productionChanged: false,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Safely parses the CurrentUsage JSON value.
+ *
+ * @param {*} value
+ * @return {Object|null}
+ */
+function MOS5D321_parseVaultUsage_(value) {
+  const text = String(value || '').trim();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {
+      rawValue: text,
+      parseError: true
+    };
+  }
+}
+
+/**
+ * Returns the next vault eligible for runtime writes.
+ *
+ * G3 treats CRITICAL as eligible but discouraged. FULL and blocked states
+ * remain unavailable through MOS5D321_isVaultCapacityAvailable_().
+ *
+ * @param {string=} currentVaultCode
+ * @return {Object}
+ */
+function MOS5D321_getNextCapacityEligibleVault(currentVaultCode) {
+  MOS5D321_assertCore_();
+
+  const currentCode = String(currentVaultCode || '')
+    .trim()
+    .toUpperCase();
+
+  const vaults = MOS5D321_getRuntimeVaults_();
+  const current = vaults.find(function(vault) {
+    return vault.vaultCode === currentCode;
+  });
+
+  const currentPriority = current ? current.priority : 0;
+
+  const candidates = vaults
+    .filter(function(vault) {
+      return (
+        vault.active &&
+        vault.priority > currentPriority &&
+        MOS5D321_isVaultCapacityAvailable_(vault.capacityStatus)
+      );
+    })
+    .sort(function(a, b) {
+      const rank = {
+        AVAILABLE: 1,
+        NOT_MEASURED: 2,
+        WARNING: 3,
+        CRITICAL: 4
+      };
+
+      const aRank = rank[a.capacityStatus] || 99;
+      const bRank = rank[b.capacityStatus] || 99;
+
+      return a.priority - b.priority || aRank - bRank;
+    });
+
+  if (!candidates.length) {
+    return {
+      success: false,
+      status: 'NO_CAPACITY_ELIGIBLE_VAULT',
+      currentVaultCode: currentCode,
+      productionChanged: false,
+      checkedAt: new Date().toISOString()
+    };
+  }
+
+  const selected = candidates[0];
+
+  return {
+    success: true,
+    status: 'CAPACITY_ELIGIBLE_VAULT_SELECTED',
+    currentVaultCode: currentCode,
+    selectedVaultCode: selected.vaultCode,
+    selectedVaultPriority: selected.priority,
+    selectedCapacityStatus: selected.capacityStatus,
+    productionChanged: false,
+    checkedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Read-only G3 diagnostics.
+ *
+ * @return {Object}
+ */
+function MOS5D321_runVaultCapacityDiagnostics() {
+  MOS5D321_assertCore_();
+
+  const tests = [];
+
+  MOS5D321_test_(
+    tests,
+    'AVAILABLE_THRESHOLD',
+    MOS5D321_calculateCapacityStatus_(74, 100) === 'AVAILABLE',
+    'Usage below 75% is AVAILABLE.',
+    'AVAILABLE threshold failed.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'WARNING_THRESHOLD',
+    MOS5D321_calculateCapacityStatus_(75, 100) === 'WARNING',
+    'Usage at 75% is WARNING.',
+    'WARNING threshold failed.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'CRITICAL_THRESHOLD',
+    MOS5D321_calculateCapacityStatus_(90, 100) === 'CRITICAL',
+    'Usage at 90% is CRITICAL.',
+    'CRITICAL threshold failed.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'FULL_THRESHOLD',
+    MOS5D321_calculateCapacityStatus_(97, 100) === 'FULL',
+    'Usage at 97% is FULL.',
+    'FULL threshold failed.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'FULL_NOT_WRITABLE',
+    MOS5D321_isVaultCapacityAvailable_('FULL') === false,
+    'FULL vaults are unavailable for runtime writes.',
+    'FULL vault remained runtime writable.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'QUOTA_EXCEEDED_NOT_WRITABLE',
+    MOS5D321_isVaultCapacityAvailable_('QUOTA_EXCEEDED') === false,
+    'QUOTA_EXCEEDED vaults are unavailable for runtime writes.',
+    'QUOTA_EXCEEDED vault remained runtime writable.'
+  );
+
+  const counts = tests.reduce(function(result, test) {
+    result[test.status.toLowerCase()]++;
+    return result;
+  }, {
+    pass: 0,
+    warning: 0,
+    fail: 0
+  });
+
+  const result = {
+    release: 'MOS5-G3-VAULT-CAPACITY',
+    version: '1.0.0',
+    overallStatus: counts.fail ? 'FAIL' : (
+      counts.warning ? 'WARNING' : 'PASS'
+    ),
+    passed: counts.pass,
+    warnings: counts.warning,
+    failed: counts.fail,
+    tests: tests,
+    productionChanged: false,
+    completedAt: new Date().toISOString()
+  };
+
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+// END MOS5-G3-VAULT-CAPACITY v1.0.0
