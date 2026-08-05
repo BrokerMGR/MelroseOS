@@ -219,6 +219,57 @@ function MOS5D32_getControl(controlKey) {
   return map[key];
 }
 
+function MOS5D32_checkLeadIntakeGate_() {
+  MOS5D32_assertCore_();
+  const state = MOS5D32_getEffectiveSafetyState();
+
+  if (state.emergencyShutdown || state.maintenanceMode || state.leadIntakePaused) {
+    throw new Error('Lead intake is currently paused by global safety controls.');
+  }
+
+  return {
+    success: true,
+    gate: 'LEAD_INTAKE',
+    status: 'OPEN',
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
+function MOS5D32_checkRoutingGate_() {
+  MOS5D32_assertCore_();
+  const state = MOS5D32_getEffectiveSafetyState();
+
+  if (state.emergencyShutdown || state.maintenanceMode || state.routingPaused) {
+    throw new Error('Routing is currently paused by global safety controls.');
+  }
+
+  return {
+    success: true,
+    gate: 'ROUTING',
+    status: 'OPEN',
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
+function MOS5D32_checkCommunicationsGate_() {
+  MOS5D32_assertCore_();
+  const state = MOS5D32_getEffectiveSafetyState();
+
+  if (state.emergencyShutdown || state.maintenanceMode || state.communicationsPaused) {
+    throw new Error('Communications are currently paused by global safety controls.');
+  }
+
+  return {
+    success: true,
+    gate: 'COMMUNICATIONS',
+    status: 'OPEN',
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
 function MOS5D32_getAllControls() {
   MOS5D32_assertCore_();
   const map = MOS5D32_getControlMap_();
