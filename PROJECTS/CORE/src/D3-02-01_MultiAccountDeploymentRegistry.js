@@ -1,5 +1,5 @@
 
-const MOS5D321_VERSION='1.0.0';
+const MOS5D321_VERSION='1.1.0';
 const MOS5D321={
   release:'MOS5-D3.2.1',
   coreWorkbookId:'1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64',
@@ -220,3 +220,363 @@ function MOS5D321_assertCore_(){
   if(ss.getId()!==MOS5D321.coreWorkbookId) throw new Error('Wrong Core workbook.');
   if(ScriptApp.getScriptId()!==MOS5D321.coreScriptId) throw new Error('Wrong Core Apps Script project.');
 }
+
+// BEGIN MOS5-G2-RUNTIME-FAILOVER v1.0.0
+/**
+ * Resolves the currently available runtime account and storage vault.
+ *
+ * This function is fail-closed and decision-only:
+ * - It does not change account ownership.
+ * - It does not change project registration.
+ * - It does not activate triggers, routing, communications, or deployment.
+ * - It does not write to the account or vault registry.
+ *
+ * @param {Object=} request
+ * @return {Object}
+ */
+function MOS5D321_resolveRuntimeFailover(request) {
+  MOS5D321_assertCore_();
+
+  const input = request || {};
+  const targetCode = String(input.targetCode || '').trim().toUpperCase();
+  const requestedAccountCode = String(input.accountCode || '').trim().toUpperCase();
+  const requestedVaultCode = String(input.vaultCode || '').trim().toUpperCase();
+  const reason = String(input.reason || 'RUNTIME_AVAILABILITY_CHECK').trim();
+
+  const accounts = MOS5D321_getRuntimeAccounts_();
+  const vaults = MOS5D321_getRuntimeVaults_();
+  const projects = MOS5D321_getRows_(MOS5D321.projects, 11);
+
+  let currentAccountCode = requestedAccountCode;
+  let currentVaultCode = requestedVaultCode;
+
+  if (targetCode) {
+    const project = projects.find(function(row) {
+      return String(row[0] || '').trim().toUpperCase() === targetCode;
+    });
+
+    if (!project) {
+      throw new Error('Unknown target code: ' + targetCode);
+    }
+
+    if (!currentAccountCode) {
+      currentAccountCode = String(project[4] || '').trim().toUpperCase();
+    }
+  }
+
+  if (currentAccountCode && !currentVaultCode) {
+    const account = accounts.find(function(item) {
+      return item.accountCode === currentAccountCode;
+    });
+
+    if (account) {
+      currentVaultCode = account.vaultCode;
+    }
+  }
+
+  const currentAccount = accounts.find(function(item) {
+    return item.accountCode === currentAccountCode;
+  }) || null;
+
+  const currentVault = vaults.find(function(item) {
+    return item.vaultCode === currentVaultCode;
+  }) || null;
+
+  const currentAvailable = Boolean(
+    currentAccount &&
+    currentVault &&
+    currentAccount.active &&
+    currentVault.active &&
+    MOS5D321_isVaultCapacityAvailable_(currentVault.capacityStatus)
+  );
+
+  if (currentAvailable) {
+    const result = {
+      success: true,
+      failoverRequired: false,
+      status: 'PRIMARY_AVAILABLE',
+      targetCode: targetCode,
+      selectedAccountCode: currentAccount.accountCode,
+      selectedAccountEmail: currentAccount.email,
+      selectedVaultCode: currentVault.vaultCode,
+      selectedVaultPriority: currentVault.priority,
+      reason: reason,
+      productionChanged: false,
+      checkedAt: new Date().toISOString()
+    };
+
+    MOS5D321_audit_(
+      'RUNTIME_AUTHORITY_RESOLVED',
+      targetCode || currentAccount.accountCode,
+      JSON.stringify(result)
+    );
+
+    return result;
+  }
+
+  const currentPriority = currentVault ? currentVault.priority : 0;
+
+  const candidates = vaults
+    .filter(function(vault) {
+      return (
+        vault.active &&
+        vault.priority > currentPriority &&
+        MOS5D321_isVaultCapacityAvailable_(vault.capacityStatus)
+      );
+    })
+    .sort(function(a, b) {
+      return a.priority - b.priority;
+    })
+    .map(function(vault) {
+      const account = accounts.find(function(item) {
+        return item.vaultCode === vault.vaultCode && item.active;
+      });
+
+      return account ? {
+        account: account,
+        vault: vault
+      } : null;
+    })
+    .filter(Boolean);
+
+  if (!candidates.length) {
+    const failed = {
+      success: false,
+      failoverRequired: true,
+      status: 'NO_AVAILABLE_FAILOVER',
+      targetCode: targetCode,
+      requestedAccountCode: currentAccountCode,
+      requestedVaultCode: currentVaultCode,
+      reason: reason,
+      productionChanged: false,
+      checkedAt: new Date().toISOString()
+    };
+
+    MOS5D321_audit_(
+      'RUNTIME_FAILOVER_UNAVAILABLE',
+      targetCode || currentAccountCode || currentVaultCode || 'UNRESOLVED',
+      JSON.stringify(failed)
+    );
+
+    throw new Error(
+      'No active runtime failover account and vault are available after ' +
+      (currentVaultCode || currentAccountCode || 'the requested authority') +
+      '.'
+    );
+  }
+
+  const selected = candidates[0];
+
+  const result = {
+    success: true,
+    failoverRequired: true,
+    status: 'FAILOVER_SELECTED',
+    targetCode: targetCode,
+    previousAccountCode: currentAccountCode,
+    previousVaultCode: currentVaultCode,
+    selectedAccountCode: selected.account.accountCode,
+    selectedAccountEmail: selected.account.email,
+    selectedVaultCode: selected.vault.vaultCode,
+    selectedVaultPriority: selected.vault.priority,
+    reason: reason,
+    productionChanged: false,
+    checkedAt: new Date().toISOString()
+  };
+
+  MOS5D321_audit_(
+    'RUNTIME_FAILOVER_SELECTED',
+    targetCode || selected.account.accountCode,
+    JSON.stringify(result)
+  );
+
+  return result;
+}
+
+/**
+ * Returns normalized account registry records for runtime resolution.
+ *
+ * @return {Array<Object>}
+ */
+function MOS5D321_getRuntimeAccounts_() {
+  return MOS5D321_getRows_(MOS5D321.accounts, 9).map(function(row) {
+    return {
+      accountCode: String(row[0] || '').trim().toUpperCase(),
+      email: String(row[1] || '').trim().toLowerCase(),
+      role: String(row[2] || '').trim(),
+      active: MOS5D321_toBoolean_(row[3]),
+      defaultTarget: String(row[4] || '').trim().toUpperCase(),
+      triggerAuthority: MOS5D321_toBoolean_(row[5]),
+      vaultCode: String(row[6] || '').trim().toUpperCase(),
+      notes: String(row[7] || '').trim(),
+      updatedAt: row[8] || ''
+    };
+  });
+}
+
+/**
+ * Returns normalized vault registry records in priority order.
+ *
+ * @return {Array<Object>}
+ */
+function MOS5D321_getRuntimeVaults_() {
+  return MOS5D321_getRows_(MOS5D321.vaults, 8)
+    .map(function(row) {
+      return {
+        priority: Number(row[0] || 0),
+        vaultCode: String(row[1] || '').trim().toUpperCase(),
+        email: String(row[2] || '').trim().toLowerCase(),
+        purpose: String(row[3] || '').trim(),
+        active: MOS5D321_toBoolean_(row[4]),
+        currentUsage: String(row[5] || '').trim(),
+        capacityStatus: String(row[6] || 'NOT_MEASURED').trim().toUpperCase(),
+        updatedAt: row[7] || ''
+      };
+    })
+    .sort(function(a, b) {
+      return a.priority - b.priority;
+    });
+}
+
+/**
+ * Capacity states that cannot receive runtime writes.
+ *
+ * NOT_MEASURED remains available during G2 because G3 will add
+ * authoritative capacity measurement and enforcement.
+ *
+ * @param {*} status
+ * @return {boolean}
+ */
+function MOS5D321_isVaultCapacityAvailable_(status) {
+  const normalized = String(status || 'NOT_MEASURED').trim().toUpperCase();
+
+  return [
+    'FULL',
+    'BLOCKED',
+    'UNAVAILABLE',
+    'DISABLED',
+    'QUOTA_EXCEEDED'
+  ].indexOf(normalized) === -1;
+}
+
+/**
+ * Normalizes registry booleans returned through display values.
+ *
+ * @param {*} value
+ * @return {boolean}
+ */
+function MOS5D321_toBoolean_(value) {
+  if (value === true || value === false) {
+    return value;
+  }
+
+  return String(value || '').trim().toUpperCase() === 'TRUE';
+}
+
+/**
+ * Read-only runtime failover diagnostics.
+ *
+ * The test simulates an unavailable Vault 1 in memory only. Registry rows
+ * are not changed.
+ *
+ * @return {Object}
+ */
+function MOS5D321_runRuntimeFailoverDiagnostics() {
+  MOS5D321_assertCore_();
+
+  const tests = [];
+  const accounts = MOS5D321_getRuntimeAccounts_();
+  const vaults = MOS5D321_getRuntimeVaults_();
+
+  MOS5D321_test_(
+    tests,
+    'FIVE_RUNTIME_ACCOUNTS',
+    accounts.length === 5,
+    'Five runtime accounts are available.',
+    'Expected five runtime accounts; found ' + accounts.length + '.'
+  );
+
+  MOS5D321_test_(
+    tests,
+    'FIVE_RUNTIME_VAULTS',
+    vaults.length === 5,
+    'Five runtime vaults are available.',
+    'Expected five runtime vaults; found ' + vaults.length + '.'
+  );
+
+  const ordered = vaults.every(function(vault, index) {
+    return vault.priority === index + 1;
+  });
+
+  MOS5D321_test_(
+    tests,
+    'VAULT_PRIORITY_ORDER',
+    ordered,
+    'Vault priorities are sequential from 1 through 5.',
+    'Vault priority order is invalid.'
+  );
+
+  const mapped = accounts.every(function(account) {
+    return vaults.some(function(vault) {
+      return (
+        vault.vaultCode === account.vaultCode &&
+        vault.email === account.email
+      );
+    });
+  });
+
+  MOS5D321_test_(
+    tests,
+    'ACCOUNT_VAULT_MAPPING',
+    mapped,
+    'Every runtime account maps to its registered vault.',
+    'One or more account-to-vault mappings are invalid.'
+  );
+
+  const firstAvailable = vaults
+    .filter(function(vault) {
+      return (
+        vault.priority > 1 &&
+        vault.active &&
+        MOS5D321_isVaultCapacityAvailable_(vault.capacityStatus)
+      );
+    })
+    .sort(function(a, b) {
+      return a.priority - b.priority;
+    })[0];
+
+  MOS5D321_test_(
+    tests,
+    'VAULT_1_FAILOVER_PATH',
+    Boolean(firstAvailable && firstAvailable.priority === 2),
+    'An unavailable Vault 1 resolves to Vault 2 first.',
+    'Vault 1 does not resolve to the expected Vault 2 failover.'
+  );
+
+  const counts = tests.reduce(function(summary, test) {
+    summary[test.status.toLowerCase()]++;
+    return summary;
+  }, {
+    pass: 0,
+    warning: 0,
+    fail: 0
+  });
+
+  const result = {
+    release: 'MOS5-G2-RUNTIME-FAILOVER',
+    version: '1.0.0',
+    overallStatus: counts.fail ? 'FAIL' : (
+      counts.warning ? 'WARNING' : 'PASS'
+    ),
+    passed: counts.pass,
+    warnings: counts.warning,
+    failed: counts.fail,
+    tests: tests,
+    decisionOnly: true,
+    productionChanged: false,
+    completedAt: new Date().toISOString()
+  };
+
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+// END MOS5-G2-RUNTIME-FAILOVER v1.0.0
