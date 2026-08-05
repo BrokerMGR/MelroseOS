@@ -1,7 +1,7 @@
 /******************************************************************************
  * MelroseOS Enterprise
  * File: LI-04_QueueProcessor.js
- * Version: 2.0.0
+ * Version: 2.1.0
  *
  * Purpose:
  *   Safely processes validated intake records through the Assignment Engine.
@@ -24,7 +24,7 @@
  *   - Routes unassigned leads to broker fallback when available.
  ******************************************************************************/
 
-const LI_QUEUE_PROCESSOR_VERSION = "2.0.0";
+const LI_QUEUE_PROCESSOR_VERSION = "2.1.0";
 const LI_QUEUE_LOCK_TIMEOUT_MS = 10000;
 
 /**
@@ -299,6 +299,30 @@ function LI_processIntakeRecord_(
     ""
   );
 
+  LI_publishLifecycleEvent_(
+    "MOS5EB_publishLeadProcessing",
+    {
+      intakeId: intakeId,
+      leadId:
+        String(
+          current.LeadID || ""
+        ).trim(),
+      status: "PROCESSING",
+      source:
+        String(
+          current.Source || ""
+        ).trim()
+    },
+    {
+      intakeId: intakeId,
+      leadId:
+        String(
+          current.LeadID || ""
+        ).trim(),
+      source: "LI-04_QUEUE_PROCESSOR"
+    }
+  );
+
   const lead = {
     LeadID:
       String(
@@ -484,7 +508,7 @@ function LI_processIntakeRecord_(
     lead.LeadID
   );
 
-  return {
+  const result = {
     success: assigned,
     status: finalStatus,
     intakeId: intakeId,
@@ -510,6 +534,19 @@ function LI_processIntakeRecord_(
         assignment.brokerFallback
       )
   };
+
+  result.eventPublication =
+    LI_publishLifecycleEvent_(
+      "MOS5EB_publishQueueResult",
+      result,
+      {
+        intakeId: intakeId,
+        leadId: lead.LeadID,
+        source: "LI-04_QUEUE_PROCESSOR"
+      }
+    );
+
+  return result;
 }
 
 /**
@@ -907,6 +944,97 @@ function LI_markIntakeError_(
     message,
     intake.LeadID
   );
+
+  LI_publishLifecycleEvent_(
+    "MOS5EB_publishLeadError",
+    {
+      intakeId:
+        String(
+          intake.IntakeID || ""
+        ).trim(),
+      leadId:
+        String(
+          intake.LeadID || ""
+        ).trim(),
+      error:
+        String(message || ""),
+      source: "LI-04_QUEUE_PROCESSOR"
+    },
+    {
+      intakeId:
+        String(
+          intake.IntakeID || ""
+        ).trim(),
+      leadId:
+        String(
+          intake.LeadID || ""
+        ).trim(),
+      source: "LI-04_QUEUE_PROCESSOR"
+    }
+  );
+}
+
+/**
+ * Publishes a lifecycle event without interrupting queue processing.
+ *
+ * @param {string} functionName
+ * @param {Object} payload
+ * @param {Object=} context
+ * @return {Object}
+ */
+function LI_publishLifecycleEvent_(
+  functionName,
+  payload,
+  context
+) {
+  const handler =
+    globalThis[functionName];
+
+  if (typeof handler !== "function") {
+    return {
+      success: false,
+      status: "EVENT_BRIDGE_UNAVAILABLE",
+      functionName: functionName,
+      productionChanged: false
+    };
+  }
+
+  try {
+    const response = handler(
+      payload || {},
+      context || {}
+    );
+
+    return response || {
+      success: true,
+      status: "PUBLISHED"
+    };
+  } catch (error) {
+    console.log(
+      JSON.stringify({
+        module: "LI-04_QUEUE_PROCESSOR",
+        warning: "EVENT_PUBLICATION_FAILED",
+        functionName: functionName,
+        error: String(
+          error && error.message
+            ? error.message
+            : error
+        )
+      })
+    );
+
+    return {
+      success: false,
+      status: "EVENT_PUBLICATION_FAILED",
+      functionName: functionName,
+      error: String(
+        error && error.message
+          ? error.message
+          : error
+      ),
+      productionChanged: false
+    };
+  }
 }
 
 /**

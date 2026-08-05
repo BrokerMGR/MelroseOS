@@ -1,13 +1,13 @@
 /******************************************************************************
  * MelroseOS
  * File: OP-00_LeadLifecycleOrchestrator.js
- * Version: 1.0.0
+ * Version: 1.1.0
  *
  * Canonical orchestration entry point:
  * Safety → Intake → Dedupe → Queue → Assignment → Audit
  ******************************************************************************/
 
-const MOS5_LEAD_ORCHESTRATOR_VERSION = "1.0.0";
+const MOS5_LEAD_ORCHESTRATOR_VERSION = "1.1.0";
 
 /**
  * Canonical end-to-end lead lifecycle entry point.
@@ -102,6 +102,43 @@ function MOS5_processLeadLifecycle(payload, options) {
       intakeResult.intake &&
       intakeResult.intake.intakeId ||
       "";
+
+    const leadId =
+      intakeResult.intake &&
+      intakeResult.intake.leadId ||
+      "";
+
+    const queuedEvent = MOS5OP_publishLifecycleEvent_(
+      "MOS5EB_publishLeadQueued",
+      {
+        intakeId: intakeId,
+        leadId: leadId,
+        source:
+          settings.source ||
+          input.Source ||
+          input.source ||
+          "ORCHESTRATOR",
+        stage:
+          intakeResult.stage || "QUEUED",
+        executionId: executionId
+      },
+      {
+        intakeId: intakeId,
+        leadId: leadId,
+        executionId: executionId,
+        source: "LEAD_LIFECYCLE_ORCHESTRATOR"
+      }
+    );
+
+    MOS5OP_addStage_(
+      trace,
+      "EVENT_LEAD_QUEUED",
+      queuedEvent.success ? "PASS" : "WARNING",
+      queuedEvent.success
+        ? "LEAD_QUEUED event published."
+        : "LEAD_QUEUED event publication was unavailable.",
+      queuedEvent
+    );
 
     const processNow = MOS5OP_isTrue_(
       settings.processNow
@@ -214,6 +251,33 @@ function MOS5_processLeadLifecycle(payload, options) {
       }
     );
 
+    const assignmentEvent = MOS5OP_publishLifecycleEvent_(
+      "MOS5EB_publishQueueResult",
+      assignment || {
+        success: false,
+        status: "UNASSIGNED",
+        intakeId: intakeId,
+        leadId: leadId,
+        reason: "Lead was not assigned."
+      },
+      {
+        intakeId: intakeId,
+        leadId: leadId,
+        executionId: executionId,
+        source: "LEAD_LIFECYCLE_ORCHESTRATOR"
+      }
+    );
+
+    MOS5OP_addStage_(
+      trace,
+      "EVENT_ASSIGNMENT_RESULT",
+      assignmentEvent.success ? "PASS" : "WARNING",
+      assignmentEvent.success
+        ? "Assignment lifecycle event published."
+        : "Assignment lifecycle event publication was unavailable.",
+      assignmentEvent
+    );
+
     return MOS5OP_complete_(
       trace,
       {
@@ -237,6 +301,39 @@ function MOS5_processLeadLifecycle(payload, options) {
           ? error.message
           : error
       )
+    );
+
+    const lifecycleError = String(
+      error && error.message
+        ? error.message
+        : error
+    );
+
+    const errorEvent = MOS5OP_publishLifecycleEvent_(
+      "MOS5EB_publishLeadError",
+      {
+        executionId: executionId,
+        error: lifecycleError,
+        source:
+          settings.source ||
+          input.Source ||
+          input.source ||
+          "ORCHESTRATOR"
+      },
+      {
+        executionId: executionId,
+        source: "LEAD_LIFECYCLE_ORCHESTRATOR"
+      }
+    );
+
+    MOS5OP_addStage_(
+      trace,
+      "EVENT_LEAD_ERROR",
+      errorEvent.success ? "PASS" : "WARNING",
+      errorEvent.success
+        ? "LEAD_ERROR event published."
+        : "LEAD_ERROR event publication was unavailable.",
+      errorEvent
     );
 
     const result = MOS5OP_complete_(
@@ -537,6 +634,48 @@ function MOS5OP_isTrue_(value) {
       .trim()
       .toUpperCase()
   ) !== -1;
+}
+
+function MOS5OP_publishLifecycleEvent_(
+  functionName,
+  payload,
+  context
+) {
+  const handler =
+    globalThis[functionName];
+
+  if (typeof handler !== "function") {
+    return {
+      success: false,
+      status: "EVENT_BRIDGE_UNAVAILABLE",
+      functionName: functionName,
+      productionChanged: false
+    };
+  }
+
+  try {
+    const response = handler(
+      payload || {},
+      context || {}
+    );
+
+    return response || {
+      success: true,
+      status: "PUBLISHED"
+    };
+  } catch (error) {
+    return {
+      success: false,
+      status: "EVENT_PUBLICATION_FAILED",
+      functionName: functionName,
+      error: String(
+        error && error.message
+          ? error.message
+          : error
+      ),
+      productionChanged: false
+    };
+  }
 }
 
 function MOS5OP_log_(
