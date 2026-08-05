@@ -98,16 +98,7 @@ function LI_setupHeaders_(){
 }
 
 function LI_checkIntakeGuard_(){
-  if(typeof MOS5D32_checkLeadIntakeGate_ === "function"){
-    return MOS5D32_checkLeadIntakeGate_();
-  }
-
-  return {
-    success:true,
-    gate:"LEAD_INTAKE",
-    status:"OPEN",
-    checkedAt:timestamp_()
-  };
+  return MOS5M1B_checkLeadIntakeGate_();
 }
 
 function LI_setHeadersIfEmpty_(sheet,headers){
@@ -369,3 +360,334 @@ function LI_testCore(){
 
   return true;
 }
+
+// BEGIN MOS5-M1B-CROSS-PROJECT-SAFETY v1.0.0
+const MOS5_M1B_SAFETY = Object.freeze({
+  VERSION: "1.0.0",
+  CORE_WORKBOOK_ID: "1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64",
+  CONTROLS_SHEET: "SYS_GLOBAL_CONTROLS",
+  CACHE_SECONDS: 30
+});
+
+/**
+ * Reads the Core safety registry from the CRM project.
+ *
+ * This is the canonical cross-project bridge. It fails closed when the Core
+ * workbook, controls sheet, or required controls cannot be read.
+ *
+ * @return {Object}
+ */
+function MOS5M1B_getGlobalSafetyState_() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = "MOS5:M1B:GLOBAL_SAFETY";
+  const cached = cache.get(cacheKey);
+
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (error) {
+      cache.remove(cacheKey);
+    }
+  }
+
+  try {
+    const core = SpreadsheetApp.openById(
+      MOS5_M1B_SAFETY.CORE_WORKBOOK_ID
+    );
+
+    const sheet = core.getSheetByName(
+      MOS5_M1B_SAFETY.CONTROLS_SHEET
+    );
+
+    if (!sheet || sheet.getLastRow() < 2) {
+      throw new Error("Core global controls are unavailable.");
+    }
+
+    const values = sheet
+      .getRange(2, 1, sheet.getLastRow() - 1, 10)
+      .getDisplayValues();
+
+    const controls = {};
+
+    values.forEach(function(row) {
+      const key = String(row[0] || "").trim().toUpperCase();
+
+      if (!key) {
+        return;
+      }
+
+      controls[key] = {
+        currentValue: String(row[4] || "").trim().toUpperCase(),
+        failClosedValue: String(row[5] || "").trim().toUpperCase(),
+        status: String(row[9] || "").trim().toUpperCase()
+      };
+    });
+
+    const required = [
+      "MAINTENANCE_MODE",
+      "COMMUNICATIONS_PAUSED",
+      "LEAD_INTAKE_PAUSED",
+      "ROUTING_PAUSED",
+      "ROUND_ROBIN_PAUSED",
+      "BROKER_ONLY_ROUTING",
+      "READ_ONLY_MODE",
+      "EMERGENCY_SHUTDOWN"
+    ];
+
+    required.forEach(function(key) {
+      if (!controls[key]) {
+        throw new Error("Missing Core safety control: " + key);
+      }
+    });
+
+    function activeBoolean(key) {
+      const item = controls[key];
+
+      if (!item || item.status !== "ACTIVE") {
+        return true;
+      }
+
+      return MOS5M1B_isTrue_(
+        item.currentValue || item.failClosedValue
+      );
+    }
+
+    const emergency = activeBoolean("EMERGENCY_SHUTDOWN");
+    const maintenance = activeBoolean("MAINTENANCE_MODE");
+
+    const state = {
+      success: true,
+      source: "CORE_GLOBAL_CONTROLS",
+      emergencyShutdown: emergency,
+      maintenanceMode: maintenance,
+      communicationsPaused:
+        emergency ||
+        maintenance ||
+        activeBoolean("COMMUNICATIONS_PAUSED"),
+      leadIntakePaused:
+        emergency ||
+        maintenance ||
+        activeBoolean("LEAD_INTAKE_PAUSED"),
+      routingPaused:
+        emergency ||
+        maintenance ||
+        activeBoolean("ROUTING_PAUSED"),
+      roundRobinPaused:
+        emergency ||
+        maintenance ||
+        activeBoolean("ROUND_ROBIN_PAUSED"),
+      brokerOnlyRouting:
+        emergency ||
+        maintenance ||
+        activeBoolean("BROKER_ONLY_ROUTING"),
+      readOnlyMode:
+        emergency ||
+        maintenance ||
+        activeBoolean("READ_ONLY_MODE"),
+      failClosed: false,
+      checkedAt: new Date().toISOString()
+    };
+
+    cache.put(
+      cacheKey,
+      JSON.stringify(state),
+      MOS5_M1B_SAFETY.CACHE_SECONDS
+    );
+
+    return state;
+  } catch (error) {
+    return {
+      success: false,
+      source: "FAIL_CLOSED",
+      emergencyShutdown: true,
+      maintenanceMode: true,
+      communicationsPaused: true,
+      leadIntakePaused: true,
+      routingPaused: true,
+      roundRobinPaused: true,
+      brokerOnlyRouting: true,
+      readOnlyMode: true,
+      failClosed: true,
+      error: String(
+        error && error.message ? error.message : error
+      ),
+      checkedAt: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Canonical intake gate for CRM.
+ *
+ * @return {Object}
+ */
+function MOS5M1B_checkLeadIntakeGate_() {
+  const state = MOS5M1B_getGlobalSafetyState_();
+
+  if (
+    !state.success ||
+    state.emergencyShutdown ||
+    state.maintenanceMode ||
+    state.readOnlyMode ||
+    state.leadIntakePaused
+  ) {
+    throw new Error(
+      "Lead intake is paused by Core global safety controls."
+    );
+  }
+
+  return {
+    success: true,
+    gate: "LEAD_INTAKE",
+    status: "OPEN",
+    source: state.source,
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
+/**
+ * Canonical routing gate for CRM.
+ *
+ * @return {Object}
+ */
+function MOS5M1B_checkRoutingGate_() {
+  const state = MOS5M1B_getGlobalSafetyState_();
+
+  if (
+    !state.success ||
+    state.emergencyShutdown ||
+    state.maintenanceMode ||
+    state.readOnlyMode ||
+    state.routingPaused
+  ) {
+    throw new Error(
+      "Routing is paused by Core global safety controls."
+    );
+  }
+
+  return {
+    success: true,
+    gate: "ROUTING",
+    status: "OPEN",
+    source: state.source,
+    brokerOnlyRouting: state.brokerOnlyRouting,
+    roundRobinPaused: state.roundRobinPaused,
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
+/**
+ * Canonical communications gate for CRM.
+ *
+ * @return {Object}
+ */
+function MOS5M1B_checkCommunicationsGate_() {
+  const state = MOS5M1B_getGlobalSafetyState_();
+
+  if (
+    !state.success ||
+    state.emergencyShutdown ||
+    state.maintenanceMode ||
+    state.readOnlyMode ||
+    state.communicationsPaused
+  ) {
+    throw new Error(
+      "Communications are paused by Core global safety controls."
+    );
+  }
+
+  return {
+    success: true,
+    gate: "COMMUNICATIONS",
+    status: "OPEN",
+    source: state.source,
+    checkedAt: new Date().toISOString(),
+    state: state
+  };
+}
+
+function MOS5M1B_isTrue_(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase() === "TRUE";
+}
+
+/**
+ * Read-only diagnostics for the cross-project safety bridge.
+ *
+ * @return {Object}
+ */
+function MOS5M1B_runSafetyBridgeDiagnostics() {
+  const tests = [];
+
+  function add(code, passed, details) {
+    tests.push({
+      code: code,
+      status: passed ? "PASS" : "FAIL",
+      details: details
+    });
+  }
+
+  const state = MOS5M1B_getGlobalSafetyState_();
+
+  add(
+    "CORE_STATE_READ",
+    Boolean(state && state.checkedAt),
+    "Core safety state returned a timestamped result."
+  );
+
+  add(
+    "FAIL_CLOSED_CONTRACT",
+    state.success === true || state.failClosed === true,
+    "Bridge either reads Core successfully or fails closed."
+  );
+
+  add(
+    "REQUIRED_BOOLEAN_FIELDS",
+    [
+      "emergencyShutdown",
+      "maintenanceMode",
+      "communicationsPaused",
+      "leadIntakePaused",
+      "routingPaused",
+      "roundRobinPaused",
+      "brokerOnlyRouting",
+      "readOnlyMode"
+    ].every(function(key) {
+      return typeof state[key] === "boolean";
+    }),
+    "All required safety fields are normalized booleans."
+  );
+
+  add(
+    "CORE_WORKBOOK_REGISTERED",
+    MOS5_M1B_SAFETY.CORE_WORKBOOK_ID ===
+      "1W-32zYjyttQQS81UnvzJFz9yhp58YUKpTM0Kw0bfK64",
+    "Correct Core workbook is registered."
+  );
+
+  const failed = tests.filter(function(test) {
+    return test.status === "FAIL";
+  }).length;
+
+  const result = {
+    release: "MOS5-M1B-CROSS-PROJECT-SAFETY",
+    version: MOS5_M1B_SAFETY.VERSION,
+    overallStatus: failed ? "FAIL" : "PASS",
+    passed: tests.length - failed,
+    failed: failed,
+    tests: tests,
+    currentSafetyState: state,
+    productionChanged: false,
+    intakeActivated: false,
+    routingActivated: false,
+    communicationsActivated: false,
+    completedAt: new Date().toISOString()
+  };
+
+  console.log(JSON.stringify(result, null, 2));
+  return result;
+}
+// END MOS5-M1B-CROSS-PROJECT-SAFETY v1.0.0
