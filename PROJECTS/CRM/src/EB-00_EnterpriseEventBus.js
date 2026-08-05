@@ -534,6 +534,12 @@ function MOS5EB_processOneEvent_(
  * @return {Object}
  */
 function MOS5EB_dispatchEvent_(event) {
+  if (
+    typeof MOS5SUB_dispatchEvent === "function"
+  ) {
+    return MOS5SUB_dispatchEvent(event);
+  }
+
   const handlerNames =
     MOS5EB_getHandlerNames_(
       event.eventType
@@ -541,65 +547,60 @@ function MOS5EB_dispatchEvent_(event) {
 
   const results = [];
 
-  handlerNames.forEach(
-    function(handlerName) {
-      const handler =
-        globalThis[handlerName];
+  handlerNames.forEach(function(handlerName) {
+    const handler =
+      globalThis[handlerName];
 
-      if (
-        typeof handler !== "function"
-      ) {
-        results.push({
-          handler:
-            handlerName,
-          status:
-            "UNAVAILABLE"
-        });
+    if (typeof handler !== "function") {
+      results.push({
+        handler: handlerName,
+        status: "UNAVAILABLE"
+      });
 
-        return;
-      }
+      return;
+    }
 
-      const response =
-        handler(event);
+    try {
+      const response = handler(event);
 
       results.push({
-        handler:
-          handlerName,
-        status:
-          "COMPLETED",
+        handler: handlerName,
+        status: "COMPLETED",
         response:
           response === undefined
             ? null
             : response
       });
+    } catch (error) {
+      results.push({
+        handler: handlerName,
+        status: "FAILED",
+        error: String(
+          error && error.message
+            ? error.message
+            : error
+        )
+      });
     }
-  );
+  });
 
   return {
-    eventType:
-      event.eventType,
-    handlerCount:
-      handlerNames.length,
+    eventType: event.eventType,
+    dispatchMode: "LEGACY_FALLBACK",
+    handlerCount: handlerNames.length,
     completedHandlers:
-      results.filter(
-        function(result) {
-          return (
-            result.status ===
-            "COMPLETED"
-          );
-        }
-      ).length,
+      results.filter(function(result) {
+        return result.status === "COMPLETED";
+      }).length,
+    failedHandlers:
+      results.filter(function(result) {
+        return result.status === "FAILED";
+      }).length,
     unavailableHandlers:
-      results.filter(
-        function(result) {
-          return (
-            result.status ===
-            "UNAVAILABLE"
-          );
-        }
-      ).length,
-    handlers:
-      results
+      results.filter(function(result) {
+        return result.status === "UNAVAILABLE";
+      }).length,
+    handlers: results
   };
 }
 
