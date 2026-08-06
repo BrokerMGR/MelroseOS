@@ -2,44 +2,107 @@ const path = require("path");
 
 const RepositoryScanner =
     require("./modules/RepositoryScanner");
+
 const FunctionIndexer =
     require("./modules/FunctionIndexer");
+
 const DependencyGraph =
     require("./modules/DependencyGraph");
+
 const MissingFunctionClassifier =
     require("./modules/MissingFunctionClassifier");
+
 const ArchitectureRules =
     require("./modules/ArchitectureRules");
+
+const ProjectHealth =
+    require("./modules/ProjectHealth");
+
+const DependencyHeatmap =
+    require("./modules/DependencyHeatmap");
+
 const ProductionReadiness =
     require("./modules/ProductionReadiness");
 
 (async () => {
-    const root = path.resolve(
-        __dirname,
-        "..",
-        ".."
-    );
+    try {
+        const root = path.resolve(
+            __dirname,
+            "..",
+            ".."
+        );
 
-    const reports = path.join(
-        __dirname,
-        "reports"
-    );
+        const reports = path.join(
+            __dirname,
+            "reports"
+        );
 
-    await new RepositoryScanner(root)
-        .writeReport(reports);
+        const repositoryScanner =
+            new RepositoryScanner(root);
 
-    await new FunctionIndexer(root)
-        .writeReport(reports);
+        const functionIndexer =
+            new FunctionIndexer(root);
 
-    await new DependencyGraph(root)
-        .writeReport(reports);
+        const dependencyGraph =
+            new DependencyGraph(root);
 
-    new MissingFunctionClassifier(root)
-        .writeReport(reports);
+        const missingFunctionClassifier =
+            new MissingFunctionClassifier(root);
 
-    new ArchitectureRules(root)
-        .writeReport(reports);
+        const architectureRules =
+            new ArchitectureRules(root);
 
-    new ProductionReadiness()
-        .writeReport(reports);
+        const projectHealth =
+            new ProjectHealth();
+
+        const dependencyHeatmap =
+            new DependencyHeatmap();
+
+        const productionReadiness =
+            new ProductionReadiness();
+
+        await repositoryScanner.writeReport(
+            reports
+        );
+
+        await functionIndexer.writeReport(
+            reports
+        );
+
+        await dependencyGraph.writeReport(
+            reports
+        );
+
+        missingFunctionClassifier.writeReport(
+            reports
+        );
+
+        architectureRules.writeReport(
+            reports
+        );
+
+        projectHealth.writeReport(
+            reports
+        );
+
+        dependencyHeatmap.writeReport(
+            reports
+        );
+
+        productionReadiness.writeReport(
+            reports
+        );
+
+    } catch (error) {
+        console.error("");
+        console.error("MACS execution failed.");
+        console.error("--------------------------");
+        console.error(
+            error && error.stack
+                ? error.stack
+                : error
+        );
+
+        process.exitCode = 1;
+    }
 })();
