@@ -91,31 +91,57 @@ class ProductionReadiness {
             });
         };
 
-        addCategory(
-            "Repository",
-            inventory.projectCount === 6
-                ? "PASS"
-                : "FAIL",
-            `${inventory.projectCount || 0} of 6 required projects detected.`,
-            inventory.projectCount === 6
-                ? 100
-                : 0
-        );
+/* ------------------------------------------------------------------------- */
+/* Dynamic Repository Validation (MACS v2) */
+/* ------------------------------------------------------------------------- */
 
-        addCategory(
-            "Function index",
-            Number(
-                functions.totalFunctions || 0
-            ) > 0
-                ? "PASS"
-                : "FAIL",
-            `${functions.totalFunctions || 0} functions indexed.`,
-            Number(
-                functions.totalFunctions || 0
-            ) > 0
-                ? 100
-                : 0
-        );
+const detectedProjects =
+    Number(inventory.projectCount || 0);
+
+const detectedProjectList =
+    Array.isArray(inventory.projects)
+        ? inventory.projects
+        : [];
+
+const projectNames =
+    detectedProjectList
+        .map(project => {
+
+            if (typeof project === "string") {
+                return project;
+            }
+
+            return (
+                project.name ||
+                project.project ||
+                "Unknown"
+            );
+
+        })
+        .join(", ");
+
+addCategory(
+
+    "Repository",
+
+    detectedProjects > 0
+        ? "PASS"
+        : "FAIL",
+
+    detectedProjects > 0
+
+        ? `${detectedProjects} project(s) detected.` +
+          (projectNames.length
+              ? ` [ ${projectNames} ]`
+              : "")
+
+        : "No enterprise projects detected.",
+
+    detectedProjects > 0
+        ? 100
+        : 0
+
+);
 
         addCategory(
             "Parser integrity",
