@@ -1,0 +1,53 @@
+const INTAKE_SETTINGS = Object.freeze({
+
+  DEVELOPMENT_MODE: true,
+
+  SAFETY_LOCK: true,
+
+  BROKER_ONLY_MODE: true,
+
+  BLOCK_EMAIL: true,
+
+  BLOCK_SMS: true,
+
+  BLOCK_ROUND_ROBIN: true,
+
+  BLOCK_RECRUITING: true,
+
+  BLOCK_CAMPAIGNS: true,
+
+  BLOCK_NOTIFICATIONS: true,
+
+  BLOCK_CALENDAR: true,
+
+  BLOCK_API_POSTS: true,
+
+  BLOCK_WEBHOOKS: true,
+
+  BLOCK_AUTOMATIONS: true,
+
+  HISTORY_IMPORT_ENABLED: true,
+
+  LIVE_MONITORING_ENABLED: false
+
+});
+
+function INTAKE_getSettings() {
+  return JSON.parse(JSON.stringify(INTAKE_SETTINGS));
+}
+
+function INTAKE_isOutboundBlocked() {
+
+  return (
+
+    INTAKE_SETTINGS.BLOCK_EMAIL ||
+
+    INTAKE_SETTINGS.BLOCK_SMS ||
+
+    INTAKE_SETTINGS.BLOCK_CAMPAIGNS ||
+
+    INTAKE_SETTINGS.BLOCK_NOTIFICATIONS
+
+  );
+
+}
