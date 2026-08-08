@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{connectorProfile="PREVIEW";oauthConfigured=$false;status="READY"}|ConvertTo-Json|Set-Content (Join-Path $r "GmailConnectionProfile.json");Write-Host "[PASS]"

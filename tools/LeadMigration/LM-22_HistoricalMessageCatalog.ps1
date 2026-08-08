@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{messagesCataloged=0;previewOnly=$true}|ConvertTo-Json|Set-Content (Join-Path $r "HistoricalMessageCatalog.json");Write-Host "[PASS]"

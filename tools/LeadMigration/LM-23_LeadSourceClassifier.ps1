@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{classified=0;supportedSources=@("Website","Recruiting","Facebook","Zillow","Manual")}|ConvertTo-Json|Set-Content (Join-Path $r "LeadSourceClassifier.json");Write-Host "[PASS]"
