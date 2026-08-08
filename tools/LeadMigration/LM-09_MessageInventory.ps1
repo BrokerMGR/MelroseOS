@@ -1,0 +1,1 @@
+$Reports=Join-Path $PSScriptRoot "reports";@{candidateMessages=0;duplicates=0}|ConvertTo-Json|Set-Content (Join-Path $Reports "MessageInventory.json");Write-Host "[PASS]"

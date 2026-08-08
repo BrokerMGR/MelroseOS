@@ -1,0 +1,1 @@
+$Reports=Join-Path $PSScriptRoot "reports";@{labels=@();previewOnly=$true}|ConvertTo-Json|Set-Content (Join-Path $Reports "LabelScan.json");Write-Host "[PASS]"

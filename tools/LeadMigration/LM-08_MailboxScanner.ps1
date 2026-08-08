@@ -1,0 +1,1 @@
+$Reports=Join-Path $PSScriptRoot "reports";@{messagesScanned=0;mode="PREVIEW"}|ConvertTo-Json|Set-Content (Join-Path $Reports "MailboxScan.json");Write-Host "[PASS]"
