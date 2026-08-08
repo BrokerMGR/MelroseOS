@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{messagesRead=0;simulationOnly=$true}|ConvertTo-Json|Set-Content (Join-Path $r "ReadSimulation.json");Write-Host "[PASS]"

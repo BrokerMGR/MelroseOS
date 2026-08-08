@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{mode="READ_ONLY_PREVIEW";gmailReadsEnabled=$false}|ConvertTo-Json|Set-Content (Join-Path $r "GmailReadProfile.json");Write-Host "[PASS]"

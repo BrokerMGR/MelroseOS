@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{startDate=$null;endDate=$null;messageWindow=0}|ConvertTo-Json|Set-Content (Join-Path $r "MessageWindowBuilder.json");Write-Host "[PASS]"

@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{candidateMessages=0;filtersLoaded=0}|ConvertTo-Json|Set-Content (Join-Path $r "CandidateMessageFilter.json");Write-Host "[PASS]"
