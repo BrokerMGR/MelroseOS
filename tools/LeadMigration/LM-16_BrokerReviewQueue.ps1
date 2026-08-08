@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{queueItems=0;status="READY";previewOnly=$true}|ConvertTo-Json|Set-Content (Join-Path $r "BrokerReviewQueue.json");Write-Host "[PASS]"

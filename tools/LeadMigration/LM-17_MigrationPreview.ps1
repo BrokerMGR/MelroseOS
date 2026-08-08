@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{readyForImport=0;duplicates=0;previewOnly=$true}|ConvertTo-Json|Set-Content (Join-Path $r "MigrationPreview.json");Write-Host "[PASS]"

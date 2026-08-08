@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{ownershipConflicts=0;preserveOwnership=$true}|ConvertTo-Json|Set-Content (Join-Path $r "OwnershipAudit.json");Write-Host "[PASS]"

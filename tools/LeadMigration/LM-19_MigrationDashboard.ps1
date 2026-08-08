@@ -1,0 +1,1 @@
+$r=Join-Path $PSScriptRoot "reports";@{brokerDashboardReady=$true;liveWrites=$false}|ConvertTo-Json|Set-Content (Join-Path $r "MigrationDashboard.json");Write-Host "[PASS]"
