@@ -1,0 +1,33 @@
+{
+  "release": "MOS5-021",
+  "version": "1.0.0",
+  "package": "4B",
+  "modules": [
+    "REC-009_GmailSender",
+    "REC-010_ReplyMonitor",
+    "REC-015_Scheduler",
+    "REC-016_LaunchControl"
+  ],
+  "launchDefault": {
+    "REC_PRODUCTION_ENABLED": "FALSE",
+    "REC_PRODUCTION_APPROVED": "FALSE"
+  },
+  "sendWindow": {
+    "days": "Monday-Saturday",
+    "timezone": "America/Chicago",
+    "start": "10:00",
+    "end": "16:00",
+    "skipSundays": true,
+    "skipConfiguredHolidays": true
+  },
+  "replyPolicy": {
+    "STOP_UNSUBSCRIBE": "DNC_AND_NO_MORE_OUTBOUND",
+    "INTERESTED": "STOP_NURTURE_AUTO_ACK_BROKER_FOLLOWUP",
+    "OTHER": "STOP_NURTURE_BROKER_REVIEW"
+  },
+  "scheduler": {
+    "sendWorker": "hourly",
+    "replyWorker": "hourly",
+    "dashboardWorker": "every_6_hours"
+  }
+}
