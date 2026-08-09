@@ -7,7 +7,7 @@ for %%I in ("%GIT_DIR%..\..") do set "ROOT=%%~fI"
 cls
 echo.
 echo ==========================================================
-echo                    GIT STATUS
+echo                     GIT PULL
 echo ==========================================================
 echo.
 
@@ -19,8 +19,16 @@ if not exist "%ROOT%\.git" (
 )
 
 cd /d "%ROOT%"
-git status
+git pull
+
+if errorlevel 1 (
+    echo.
+    echo [FAIL] Git pull failed.
+    pause
+    exit /b 1
+)
 
 echo.
+echo [PASS] Repository is current.
 pause
 exit /b 0
