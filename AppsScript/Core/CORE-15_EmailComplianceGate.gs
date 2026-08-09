@@ -33,7 +33,7 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.3.0';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.4.1';
 
 const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
   '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
@@ -462,6 +462,10 @@ function MGR_EMAIL_complianceDiagnostics() {
 /**
  * Compliance wrapper.
  */
+/* ASCII_SAFE_BRAND_HEADER_V2
+ * Global email branding must use ASCII-only decorative separators.
+ * Approved header subtitle: REAL ESTATE | LOUISIANA
+ */
 function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
   const postal = MGR_EMAIL_getSetting_(
     MGR_EMAIL_CFG.PROPERTY_POSTAL_ADDRESS,
@@ -507,7 +511,7 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',
     'line-height:1.5;color:#d7bd79;margin-top:6px;letter-spacing:1.2px;',
     'text-transform:uppercase;">',
-    'Real Estate â€¢ Louisiana',
+    'REAL ESTATE | LOUISIANA',
     '</div>',
     '</td>',
     '</tr>',
@@ -1055,6 +1059,7 @@ function MGR_EMAIL_assertObject_(value, label) {
   }
   return value;
 }
+
 
 
 
