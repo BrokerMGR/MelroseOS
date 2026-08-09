@@ -1,0 +1,39 @@
+{
+  "release": "MOS5-017A",
+  "targetRelease": "MOS5-016",
+  "validateReports": [
+    "GmailDiscovery.json",
+    "MessageInventory.json",
+    "LeadExtraction.json",
+    "LeadParser.json",
+    "EntityRecognition.json",
+    "NormalizedLeads.json",
+    "DuplicateDetection.json",
+    "MergePlan.json",
+    "CRMWritePreview.json",
+    "CRMValidation.json",
+    "AttachmentDiscovery.json",
+    "AttachmentProcessing.json",
+    "LabelManagement.json",
+    "LeadHistory.json",
+    "ConversationGroups.json",
+    "LeadTimeline.json",
+    "AgentResolution.json",
+    "BrokerReviewQueue.json",
+    "ComplianceScan.json",
+    "ExceptionQueue.json",
+    "DataQuality.json",
+    "ImportPreview.json",
+    "ExportManifest.json",
+    "MigrationSummary.json",
+    "Diagnostics.json",
+    "Performance.json",
+    "BackupPreview.json",
+    "RestorePreview.json",
+    "ReleaseManifest.json"
+  ],
+  "ignoreReports": [
+    "MigrationReport.json",
+    "ValidationReport.json"
+  ]
+}
