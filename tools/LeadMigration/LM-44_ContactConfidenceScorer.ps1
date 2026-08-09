@@ -1,0 +1,4 @@
+param([Parameter(Mandatory=$true)][string]$InputPath,[string]$OutputPath="")
+$ErrorActionPreference="Stop";$d=Get-Content $InputPath -Raw|ConvertFrom-Json;$a=if($d.records){@($d.records)}else{@($d)};$r=@()
+foreach($x in $a){$s=0;$why=@();if($x.PrimaryEmail){$s+=35;$why+="EMAIL"};if($x.PrimaryPhone){$s+=30;$why+="PHONE"};if($x.FirstName){$s+=10;$why+="FIRST_NAME"};if($x.LastName){$s+=10;$why+="LAST_NAME"};if($x.PrimaryPropertyAddress){$s+=15;$why+="ADDRESS"};$r+=[pscustomobject]@{MessageId=$x.MessageId;FirstName=$x.FirstName;LastName=$x.LastName;PrimaryEmail=$x.PrimaryEmail;PrimaryPhone=$x.PrimaryPhone;PrimaryPropertyAddress=$x.PrimaryPropertyAddress;Confidence=[Math]::Min(100,$s);ConfidenceReasons=$why;RequiresBrokerReview=($s-lt60)}}
+if(!$OutputPath){$OutputPath=Join-Path $PSScriptRoot "reports\LeadContactConfidence.json"};@{release="MOS5-016-S1I";records=$r}|ConvertTo-Json -Depth 30|Set-Content $OutputPath;Write-Host "[PASS] Confidence scored: $($r.Count)"
