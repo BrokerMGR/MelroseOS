@@ -1,0 +1,24 @@
+{
+  "release": "MOS5-021",
+  "version": "1.0.0",
+  "package": "4C-LREC",
+  "publicSource": "Louisiana Real Estate Commission Verify License Search",
+  "publicSearchUrl": "https://portal.lrec.gov/public/search",
+  "matchingPolicy": {
+    "preferred": "LICENSE_NUMBER",
+    "fallback": "EXACT_FIRST_LAST_NAME",
+    "ambiguous": "REVIEW_REQUIRED",
+    "neverAssumeActive": true
+  },
+  "rateLimit": {
+    "minimumDelayMilliseconds": 2500,
+    "recheckHours": 24,
+    "cacheHours": 6
+  },
+  "activeTransition": {
+    "stopPreLicenseCampaign": true,
+    "recordSponsoringBroker": true,
+    "queueFutureActiveAgentRecruiting": true
+  },
+  "productionEmailStillDisabled": true
+}
