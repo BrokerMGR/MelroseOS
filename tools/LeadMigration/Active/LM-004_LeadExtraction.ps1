@@ -9,7 +9,7 @@ $Common=Join-Path $Root 'CoreModules\LM-000_Common.ps1'
 if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red;exit 1}
 . $Common
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'MessageInventory.json'
+$InputPath=Join-Path $Reports 'MessageInventory.json'
 $Output=Join-Path $Reports 'LeadExtraction.json'
 function Get-MOSEmails([string]$Text){
  if([string]::IsNullOrWhiteSpace($Text)){return @()}
@@ -26,8 +26,8 @@ function Get-MOSPhones([string]$Text){
 }
 function Invoke-MOSLeadExtraction{
  Write-MOSHeader 'LM-004 Lead Extraction'
- if(!(Test-Path $Input)){Write-MOSError 'MessageInventory.json not found.';exit 1}
- $d=Get-Content $Input -Raw|ConvertFrom-Json
+ if(!(Test-Path $InputPath)){Write-MOSError 'MessageInventory.json not found.';exit 1}
+ $d=Get-Content $InputPath -Raw|ConvertFrom-Json
  $rows=@()
  foreach($b in @($d.mailboxes)){
   foreach($m in @($b.Messages)){

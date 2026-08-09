@@ -10,7 +10,7 @@ if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -Foreg
 . $Common
 
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'NormalizedLeads.json'
+$InputPath=Join-Path $Reports 'NormalizedLeads.json'
 $Output=Join-Path $Reports 'DuplicateDetection.json'
 
 function Get-MOSDuplicateKey {
@@ -23,9 +23,9 @@ function Get-MOSDuplicateKey {
 
 function Invoke-MOSDuplicateDetection{
  Write-MOSHeader 'LM-008 Duplicate Detection'
- if(!(Test-Path $Input)){Write-MOSError 'NormalizedLeads.json not found.';exit 1}
+ if(!(Test-Path $InputPath)){Write-MOSError 'NormalizedLeads.json not found.';exit 1}
 
- $d=Get-Content $Input -Raw|ConvertFrom-Json
+ $d=Get-Content $InputPath -Raw|ConvertFrom-Json
  $seen=@{}
  $rows=@()
 

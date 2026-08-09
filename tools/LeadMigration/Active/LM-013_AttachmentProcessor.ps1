@@ -10,7 +10,7 @@ if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -Foreg
 . $Common
 
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'AttachmentDiscovery.json'
+$InputPath=Join-Path $Reports 'AttachmentDiscovery.json'
 $Output=Join-Path $Reports 'AttachmentProcessing.json'
 
 function Get-MOSAttachmentDisposition {
@@ -28,9 +28,9 @@ function Get-MOSAttachmentDisposition {
 
 function Invoke-MOSAttachmentProcessor {
  Write-MOSHeader 'LM-013 Attachment Processor'
- if(!(Test-Path $Input)){Write-MOSError 'AttachmentDiscovery.json not found.';exit 1}
+ if(!(Test-Path $InputPath)){Write-MOSError 'AttachmentDiscovery.json not found.';exit 1}
 
- $data=Get-Content $Input -Raw|ConvertFrom-Json
+ $data=Get-Content $InputPath -Raw|ConvertFrom-Json
  $rows=@()
 
  foreach($a in @($data.attachments)){

@@ -9,7 +9,7 @@ $Common=Join-Path $Root 'CoreModules\LM-000_Common.ps1'
 if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red;exit 1}
 . $Common
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'EntityRecognition.json'
+$InputPath=Join-Path $Reports 'EntityRecognition.json'
 $Output=Join-Path $Reports 'NormalizedLeads.json'
 function NEmail([string]$v){([string]$v).Trim().ToLowerInvariant()}
 function NPhone([string]$v){$d=([string]$v)-replace'\D','';if($d.Length-eq11-and$d.StartsWith('1')){$d=$d.Substring(1)};$d}
@@ -21,8 +21,8 @@ function Fingerprint($l){
 }
 function Invoke-MOSNormalization{
  Write-MOSHeader 'LM-007 Normalization'
- if(!(Test-Path $Input)){Write-MOSError 'EntityRecognition.json not found.';exit 1}
- $d=Get-Content $Input -Raw|ConvertFrom-Json
+ if(!(Test-Path $InputPath)){Write-MOSError 'EntityRecognition.json not found.';exit 1}
+ $d=Get-Content $InputPath -Raw|ConvertFrom-Json
  $rows=@()
  foreach($l in @($d.entities)){
   $o=[ordered]@{

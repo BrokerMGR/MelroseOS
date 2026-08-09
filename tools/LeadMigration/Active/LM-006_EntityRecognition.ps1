@@ -9,7 +9,7 @@ $Common=Join-Path $Root 'CoreModules\LM-000_Common.ps1'
 if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red;exit 1}
 . $Common
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'LeadParser.json'
+$InputPath=Join-Path $Reports 'LeadParser.json'
 $Output=Join-Path $Reports 'EntityRecognition.json'
 function Get-MOSLeadType([string]$Text){
  $t=([string]$Text).ToLowerInvariant()
@@ -26,8 +26,8 @@ function Get-MOSConfidence($r){
 }
 function Invoke-MOSEntityRecognition{
  Write-MOSHeader 'LM-006 Entity Recognition'
- if(!(Test-Path $Input)){Write-MOSError 'LeadParser.json not found.';exit 1}
- $d=Get-Content $Input -Raw|ConvertFrom-Json
+ if(!(Test-Path $InputPath)){Write-MOSError 'LeadParser.json not found.';exit 1}
+ $d=Get-Content $InputPath -Raw|ConvertFrom-Json
  $rows=@()
  foreach($r in @($d.records)){
   $type=Get-MOSLeadType "$($r.Subject)`n$($r.Snippet)"

@@ -9,7 +9,7 @@ $Common=Join-Path $Root 'CoreModules\LM-000_Common.ps1'
 if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red;exit 1}
 . $Common
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'LeadExtraction.json'
+$InputPath=Join-Path $Reports 'LeadExtraction.json'
 $Output=Join-Path $Reports 'LeadParser.json'
 function Get-MOSName([string]$From){
  $n=''
@@ -24,8 +24,8 @@ function Get-MOSAddress([string]$Text){
 }
 function Invoke-MOSLeadParser{
  Write-MOSHeader 'LM-005 Lead Parser'
- if(!(Test-Path $Input)){Write-MOSError 'LeadExtraction.json not found.';exit 1}
- $d=Get-Content $Input -Raw|ConvertFrom-Json
+ if(!(Test-Path $InputPath)){Write-MOSError 'LeadExtraction.json not found.';exit 1}
+ $d=Get-Content $InputPath -Raw|ConvertFrom-Json
  $rows=@()
  foreach($x in @($d.candidates)){
   $n=Get-MOSName ([string]$x.From)

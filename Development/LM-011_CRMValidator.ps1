@@ -10,7 +10,7 @@ if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -Foreg
 . $Common
 
 $Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$Input=Join-Path $Reports 'CRMWritePreview.json'
+$InputPath=Join-Path $Reports 'CRMWritePreview.json'
 $Output=Join-Path $Reports 'CRMValidation.json'
 
 function Test-MOSCRMRecord{
@@ -42,9 +42,9 @@ function Test-MOSCRMRecord{
 
 function Invoke-MOSCRMValidator{
  Write-MOSHeader 'LM-011 CRM Validator'
- if(!(Test-Path $Input)){Write-MOSError 'CRMWritePreview.json not found.';exit 1}
+ if(!(Test-Path $InputPath)){Write-MOSError 'CRMWritePreview.json not found.';exit 1}
 
- $data=Get-Content $Input -Raw|ConvertFrom-Json
+ $data=Get-Content $InputPath -Raw|ConvertFrom-Json
  $results=@()
 
  foreach($r in @($data.records)){
