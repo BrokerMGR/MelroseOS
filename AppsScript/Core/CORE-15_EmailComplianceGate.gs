@@ -33,7 +33,7 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.2.0';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.3.0';
 
 const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
   '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
@@ -81,7 +81,10 @@ function MGR_EMAIL_send(message) {
   MGR_EMAIL_assertObject_(message, 'message');
 
   const to = MGR_EMAIL_normalizeEmail_(message.to);
-  const subject = String(message.subject || '').trim();
+  const subject = MGR_EMAIL_normalizeOutboundText_(
+    String(message.subject || '').trim(),
+    'subject'
+  );
 
   if (!MGR_EMAIL_isValidEmail_(to)) {
     throw new Error('EMAIL_COMPLIANCE_BLOCK: Invalid recipient email.');
@@ -824,6 +827,178 @@ function MGR_EMAIL_escapeAttr_(value) {
  * Adds the brokerage business card to every compliant outbound email.
  * Existing caller-provided inline images are preserved.
  */
+/**
+ * Normalize outbound typography and repair common mojibake before send.
+ * Legitimate letters and names are preserved; malformed punctuation/control
+ * sequences are repaired or blocked.
+ */
+function MGR_EMAIL_normalizeOutboundText_(value, context) {
+  let text = String(
+    value === null || value === undefined ? '' : value
+  );
+
+  const replacements = [
+    [/\u00A0/g, ' '],
+    [/\u2018|\u2019|\u201A|\u201B/g, "'"],
+    [/\u201C|\u201D|\u201E|\u201F/g, '"'],
+    [/\u2013|\u2014|\u2212/g, '-'],
+    [/\u2022|\u2023|\u25E6|\u2043/g, '-'],
+    [/\u2026/g, '...'],
+    [/\u00B7/g, '-'],
+    [/\u2122/g, ' TM'],
+    [/\u00AE/g, ' (R)'],
+    [/\u00A9/g, ' (C)'],
+
+    [/Ã¢â‚¬â„¢/g, "'"],
+    [/Ã¢â‚¬Ëœ/g, "'"],
+    [/Ã¢â‚¬Å“/g, '"'],
+    [/Ã¢â‚¬Â/g, '"'],
+    [/Ã¢â‚¬â€œ/g, '-'],
+    [/Ã¢â‚¬â€/g, '-'],
+    [/Ã¢â‚¬Â¢/g, '-'],
+    [/Ã¢â‚¬Â¦/g, '...'],
+    [/Ã‚ /g, ' '],
+    [/Ã‚/g, ''],
+    [/Î“Ã¶Ã‡/g, '-'],
+    [/Î“Ã¶Â£/g, '-'],
+    [/Î“Ã¶Ã¶/g, '-']
+  ];
+
+  replacements.forEach(function(pair) {
+    text = text.replace(pair[0], pair[1]);
+  });
+
+  text = text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .trim();
+
+  MGR_EMAIL_assertTypographySafe_(text, context || 'text');
+
+  return text;
+}
+
+/**
+ * HTML-safe typography normalization. Keeps markup intact while repairing
+ * common malformed punctuation/encoding artifacts in the serialized HTML.
+ */
+function MGR_EMAIL_normalizeOutboundHtml_(html) {
+  let value = String(html || '');
+
+  const replacements = [
+    [/\u00A0/g, '&nbsp;'],
+    [/\u2018|\u2019|\u201A|\u201B/g, '&#39;'],
+    [/\u201C|\u201D|\u201E|\u201F/g, '&quot;'],
+    [/\u2013|\u2014|\u2212/g, '-'],
+    [/\u2022|\u2023|\u25E6|\u2043/g, '-'],
+    [/\u2026/g, '...'],
+    [/\u00B7/g, '-'],
+
+    [/Ã¢â‚¬â„¢/g, '&#39;'],
+    [/Ã¢â‚¬Ëœ/g, '&#39;'],
+    [/Ã¢â‚¬Å“/g, '&quot;'],
+    [/Ã¢â‚¬Â/g, '&quot;'],
+    [/Ã¢â‚¬â€œ/g, '-'],
+    [/Ã¢â‚¬â€/g, '-'],
+    [/Ã¢â‚¬Â¢/g, '-'],
+    [/Ã¢â‚¬Â¦/g, '...'],
+    [/Ã‚ /g, ' '],
+    [/Ã‚/g, ''],
+    [/Î“Ã¶Ã‡/g, '-'],
+    [/Î“Ã¶Â£/g, '-'],
+    [/Î“Ã¶Ã¶/g, '-']
+  ];
+
+  replacements.forEach(function(pair) {
+    value = value.replace(pair[0], pair[1]);
+  });
+
+  value = value.replace(
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+    ''
+  );
+
+  MGR_EMAIL_assertTypographySafe_(value, 'html');
+
+  return value;
+}
+
+/**
+ * Fail closed if suspicious encoding artifacts remain.
+ */
+function MGR_EMAIL_assertTypographySafe_(value, context) {
+  const text = String(value || '');
+
+  const forbidden = [
+    '\uFFFD',
+    'Ãƒ',
+    'Ã‚',
+    'Ã¢â‚¬',
+    'Ã¢â‚¬â„¢',
+    'Ã¢â‚¬Å“',
+    'Ã¢â‚¬Â',
+    'Ã¢â‚¬â€œ',
+    'Ã¢â‚¬â€',
+    'Ã¢â‚¬Â¢',
+    'Î“Ã¶'
+  ];
+
+  const found = forbidden.filter(function(token) {
+    return text.indexOf(token) !== -1;
+  });
+
+  if (found.length) {
+    throw new Error(
+      'EMAIL_TYPOGRAPHY_BLOCK: Suspicious encoding detected in ' +
+      String(context || 'content') +
+      ': ' +
+      found.join(', ')
+    );
+  }
+
+  return true;
+}
+
+function MGR_EMAIL_typographyDiagnostics() {
+  const tests = [
+    {
+      input: 'Seller Ã¢â‚¬â„¢ update Ã¢â‚¬â€ Melrose',
+      expected: "Seller ' update - Melrose"
+    },
+    {
+      input: 'Website Î“Ã¶Ã‡ Academy Î“Ã¶Ã‡ Consultation',
+      expected: 'Website - Academy - Consultation'
+    },
+    {
+      input: 'Hello\u00A0World',
+      expected: 'Hello World'
+    }
+  ];
+
+  const results = tests.map(function(test) {
+    const actual = MGR_EMAIL_normalizeOutboundText_(
+      test.input,
+      'diagnostic'
+    );
+
+    return {
+      input: test.input,
+      expected: test.expected,
+      actual: actual,
+      pass: actual === test.expected
+    };
+  });
+
+  return {
+    success: results.every(function(row) {
+      return row.pass === true;
+    }),
+    version: MGR_EMAIL_COMPLIANCE_VERSION,
+    results: results,
+    timestamp: new Date().toISOString()
+  };
+}
 function MGR_EMAIL_getComplianceInlineImages_(existing) {
   const images = {};
 
@@ -880,5 +1055,6 @@ function MGR_EMAIL_assertObject_(value, label) {
   }
   return value;
 }
+
 
 
