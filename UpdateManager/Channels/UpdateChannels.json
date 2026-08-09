@@ -1,0 +1,9 @@
+{
+  "release": "MOS5-019",
+  "defaultChannel": "STABLE",
+  "channels": [
+    {"id":"STABLE","enabled":true},
+    {"id":"PREVIEW","enabled":false},
+    {"id":"DEV","enabled":false}
+  ]
+}
