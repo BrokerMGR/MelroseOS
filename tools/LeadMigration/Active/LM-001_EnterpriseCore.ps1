@@ -3,67 +3,41 @@
 MelroseOS Enterprise
 Module : LM-001
 Name   : Enterprise Core
-Version: 1.0.0
+Version: 1.0.1
 Release: MOS5-016
 ==========================================================
 #>
 
 $ErrorActionPreference = 'Stop'
 
-#----------------------------------------------------------
-# Load Common Library
-#----------------------------------------------------------
+$RepositoryRoot = 'D:\MelroseOS\GitHub\MelroseOS'
+$CommonModule   = Join-Path $RepositoryRoot 'CoreModules\LM-000_Common.ps1'
 
-$CommonModule = Join-Path (Split-Path $PSScriptRoot -Parent) `
-    "tools\LeadMigration\Active\LM-000_Common.ps1"
-
-if (Test-Path $CommonModule) {
-    . $CommonModule
-}
-else {
-    Write-Host "LM-000_Common.ps1 not found." -ForegroundColor Red
+if (-not (Test-Path -LiteralPath $CommonModule)) {
+    Write-Host "[FAIL] LM-000_Common.ps1 not found:" -ForegroundColor Red
+    Write-Host $CommonModule -ForegroundColor Red
     exit 1
 }
 
-#----------------------------------------------------------
-# Global Configuration
-#----------------------------------------------------------
+. $CommonModule
 
 $Global:MOS = @{
-
-    Release = "MOS5-016"
-
-    Version = "1.0.0"
-
-    Root = Get-MOSRoot
-
+    Release       = 'MOS5-016'
+    Version       = '1.0.1'
+    Root          = $RepositoryRoot
     LeadMigration = Get-MOSLeadMigrationRoot
-
 }
 
-#----------------------------------------------------------
-# Enterprise Banner
-#----------------------------------------------------------
-
 function Show-MOSEnterpriseBanner {
-
-    Write-MOSHeader "Enterprise Core"
-
+    Write-MOSHeader 'Enterprise Core'
     Write-Host "Release : $($Global:MOS.Release)"
     Write-Host "Version : $($Global:MOS.Version)"
     Write-Host "Root    : $($Global:MOS.Root)"
-
     Write-Host ""
-
 }
 
-#----------------------------------------------------------
-# Enterprise Health
-#----------------------------------------------------------
-
 function Test-MOSEnvironment {
-
-    Write-MOSInfo "Running Enterprise Diagnostics..."
+    Write-MOSInfo 'Running Enterprise Diagnostics...'
 
     $Folders = @(
         "$($Global:MOS.LeadMigration)\Active",
@@ -75,31 +49,29 @@ function Test-MOSEnvironment {
         "$($Global:MOS.LeadMigration)\Installers"
     )
 
-    foreach($Folder in $Folders){
+    $Failed = 0
 
-        if(Test-Path $Folder){
-
+    foreach ($Folder in $Folders) {
+        if (Test-Path -LiteralPath $Folder) {
             Write-MOSSuccess $Folder
-
         }
-        else{
-
+        else {
             Write-MOSError $Folder
-
+            $Failed++
         }
-
     }
 
+    return ($Failed -eq 0)
 }
-
-#----------------------------------------------------------
-# Startup
-#----------------------------------------------------------
 
 Show-MOSEnterpriseBanner
 
-Test-MOSEnvironment
+if (-not (Test-MOSEnvironment)) {
+    Write-MOSError 'LM-001 environment validation failed.'
+    exit 1
+}
 
-Write-MOSLog "Enterprise Core Loaded"
+Write-MOSLog -Message 'Enterprise Core Loaded' -LogName 'LeadMigration'
+Write-MOSSuccess 'LM-001 Enterprise Core Ready'
 
-Write-MOSSuccess "LM-001 Enterprise Core Ready"
+exit 0
