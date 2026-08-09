@@ -1,0 +1,19 @@
+{
+  "release": "MOS5-021",
+  "version": "1.0.0",
+  "package": "4A",
+  "modules": [
+    "REC-008_CampaignQueue",
+    "REC-012_StateEngine",
+    "REC-013_BrokerDashboard",
+    "REC-014_OperationsDiagnostics"
+  ],
+  "productionSendingEnabled": false,
+  "dashboardSheet": "MGR_RECRUITING_DASHBOARD",
+  "notes": [
+    "Queue is read-only and does not send email.",
+    "Dashboard reads the existing recruiting spreadsheet.",
+    "Reply and LREC state transitions are centralized.",
+    "Production outbound remains disabled until the sender and reply-monitor packages are installed and approved."
+  ]
+}
