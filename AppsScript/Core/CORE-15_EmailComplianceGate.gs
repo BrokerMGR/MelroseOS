@@ -33,7 +33,7 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.1.0';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.2.0';
 
 const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
   '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
@@ -465,55 +465,151 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     ''
   );
 
-  const footer = [
-    '<div style="max-width:680px;margin:30px auto 0;padding:22px 18px;border-top:1px solid #d8d8d8;',
-    'font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.65;color:#626262;text-align:center;">',
+  const subject = String(
+    (message && message.subject) || ''
+  ).trim();
 
-    '<div style="margin-bottom:10px;">',
-    '<a href="' + MGR_EMAIL_escapeAttr_(urls.website) + '" style="color:#172033;">Website</a>',
-    ' &nbsp;â€¢&nbsp; ',
-    '<a href="' + MGR_EMAIL_escapeAttr_(urls.consultation) + '" style="color:#172033;">Schedule Consultation</a>',
-    ' &nbsp;â€¢&nbsp; ',
-    '<a href="' + MGR_EMAIL_escapeAttr_(urls.academy) + '" style="color:#172033;">Request Academy Access</a>',
+  const preheader = subject
+    ? MGR_EMAIL_escapeHtml_(subject)
+    : 'Melrose Group Realty';
+
+  const html = [
+    '<!doctype html>',
+    '<html>',
+    '<head>',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">',
+    '</head>',
+    '<body style="margin:0;padding:0;background:#eef2f6;">',
+
+    '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">',
+    preheader,
     '</div>',
 
-    '<div style="margin:0 0 16px;">',
+    '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" ',
+    'style="width:100%;background:#eef2f6;margin:0;padding:0;">',
+    '<tr><td align="center" style="padding:28px 12px;">',
+
+    '<table role="presentation" width="680" cellspacing="0" cellpadding="0" border="0" ',
+    'style="width:100%;max-width:680px;background:#ffffff;border-collapse:separate;',
+    'border-spacing:0;border-radius:14px;overflow:hidden;',
+    'box-shadow:0 8px 28px rgba(15,32,55,0.10);">',
+
+    '<tr>',
+    '<td style="background:#10243d;padding:22px 28px;text-align:center;">',
+    '<div style="font-family:Georgia,Times New Roman,serif;font-size:26px;',
+    'line-height:1.2;color:#ffffff;font-weight:bold;letter-spacing:.3px;">',
+    'Melrose Group Realty',
+    '</div>',
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',
+    'line-height:1.5;color:#d7bd79;margin-top:6px;letter-spacing:1.2px;',
+    'text-transform:uppercase;">',
+    'Real Estate â€¢ Louisiana',
+    '</div>',
+    '</td>',
+    '</tr>',
+
+    '<tr>',
+    '<td style="height:5px;background:#c7a35a;font-size:0;line-height:0;">&nbsp;</td>',
+    '</tr>',
+
+    '<tr>',
+    '<td style="padding:34px 34px 18px 34px;',
+    'font-family:Arial,Helvetica,sans-serif;',
+    'font-size:16px;line-height:1.65;color:#26364a;">',
+    contentHtml,
+    '</td>',
+    '</tr>',
+
+    '<tr>',
+    '<td style="padding:8px 28px 26px 28px;">',
+    '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">',
+    '<tr>',
+    '<td align="center" style="padding:0 0 10px 0;">',
+
+    '<a href="' + MGR_EMAIL_escapeAttr_(urls.consultation) + '" ',
+    'style="display:inline-block;background:#10243d;color:#ffffff;',
+    'font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;',
+    'text-decoration:none;padding:12px 18px;border-radius:6px;margin:4px;">',
+    'Schedule Consultation',
+    '</a>',
+
+    '<a href="' + MGR_EMAIL_escapeAttr_(urls.academy) + '" ',
+    'style="display:inline-block;background:#c7a35a;color:#10243d;',
+    'font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;',
+    'text-decoration:none;padding:12px 18px;border-radius:6px;margin:4px;">',
+    'Request Academy Access',
+    '</a>',
+
+    '</td>',
+    '</tr>',
+
+    '<tr>',
+    '<td align="center" style="padding:2px 0 0 0;">',
+    '<a href="' + MGR_EMAIL_escapeAttr_(urls.website) + '" ',
+    'style="font-family:Arial,Helvetica,sans-serif;font-size:13px;',
+    'color:#10243d;text-decoration:underline;">',
+    'Visit MelroseGroupRealty.com',
+    '</a>',
+    '</td>',
+    '</tr>',
+    '</table>',
+    '</td>',
+    '</tr>',
+
+    '<tr>',
+    '<td style="padding:0 28px 22px 28px;text-align:center;">',
     '<img src="cid:mgrBusinessCard" alt="Melrose Group Realty business card" ',
-    'style="display:block;max-width:420px;width:100%;height:auto;margin:0 auto;border:0;">',
-    '</div>',
+    'style="display:block;max-width:430px;width:100%;height:auto;',
+    'margin:0 auto;border:0;border-radius:8px;">',
+    '</td>',
+    '</tr>',
 
-    '<div>',
+    '<tr>',
+    '<td style="background:#f7f8fa;border-top:1px solid #e1e6eb;',
+    'padding:20px 28px 24px 28px;text-align:center;">',
+
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',
+    'line-height:1.65;color:#667587;">',
+    '<strong style="color:#10243d;">',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.BROKERAGE_NAME),
-    '<br>',
+    '</strong><br>',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.LICENSE_TEXT),
-    ' â€¢ ',
+    '<br>',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.OFFICE_PHONE),
-    ' â€¢ ',
+    '<br>',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.LOCATION),
     '<br>',
     MGR_EMAIL_escapeHtml_(postal),
     '</div>',
 
+    '<div style="margin-top:14px;font-family:Arial,Helvetica,sans-serif;',
+    'font-size:11px;line-height:1.6;color:#7c8794;">',
+    'You are receiving this email because your contact information was included ',
+    'in a Melrose Group Realty business or recruiting workflow.',
+    '</div>',
+
     '<div style="margin-top:10px;">',
-    'You are receiving this email because your contact information was included in a Melrose Group Realty business or recruiting workflow. ',
-    '<a href="' + MGR_EMAIL_escapeAttr_(urls.unsubscribe) + '" style="color:#172033;">Unsubscribe</a>',
-    ' from future marketing communications.',
+    '<a href="' + MGR_EMAIL_escapeAttr_(urls.unsubscribe) + '" ',
+    'style="font-family:Arial,Helvetica,sans-serif;font-size:11px;',
+    'color:#6b7280;text-decoration:underline;">',
+    'Unsubscribe from marketing emails',
+    '</a>',
     '</div>',
 
-    '</div>'
+    '</td>',
+    '</tr>',
+
+    '</table>',
+    '</td></tr>',
+    '</table>',
+
+    '</body>',
+    '</html>'
   ].join('');
 
-  return [
-    '<!doctype html>',
-    '<html><body style="margin:0;padding:20px;background:#ffffff;">',
-    '<div style="max-width:680px;margin:0 auto;">',
-    contentHtml,
-    '</div>',
-    footer,
-    '</body></html>'
-  ].join('');
+  return html;
 }
-
 function MGR_EMAIL_buildPlainText_(body, urls) {
   const postal = MGR_EMAIL_getSetting_(
     MGR_EMAIL_CFG.PROPERTY_POSTAL_ADDRESS,
@@ -784,4 +880,5 @@ function MGR_EMAIL_assertObject_(value, label) {
   }
   return value;
 }
+
 
