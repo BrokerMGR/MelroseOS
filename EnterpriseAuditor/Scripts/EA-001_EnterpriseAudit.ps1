@@ -3,7 +3,7 @@ MelroseOS Enterprise
 Enterprise Auditor
 Module : EA-001_EnterpriseAudit
 Release: MOS5-020
-Version: 1.0.0
+Version: 1.0.1
 #>
 
 $ErrorActionPreference='Stop'
@@ -26,12 +26,38 @@ function Write-Section([string]$Title){
     Write-Host '=========================================================='
     Write-Host ''
 }
+
 function Write-Pass([string]$Text){Write-Host "[PASS] $Text" -ForegroundColor Green}
 function Write-Fail([string]$Text){Write-Host "[FAIL] $Text" -ForegroundColor Red}
 function Write-Warn([string]$Text){Write-Host "[WARN] $Text" -ForegroundColor Yellow}
 function Write-Info([string]$Text){Write-Host "[INFO] $Text"}
 
-Write-Section 'MELROSEOS ENTERPRISE AUDITOR'
+function Invoke-GitAudit {
+    param([string[]]$Arguments)
+
+    $psi=New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName='git.exe'
+    $psi.Arguments=($Arguments -join ' ')
+    $psi.WorkingDirectory=$Root
+    $psi.UseShellExecute=$false
+    $psi.RedirectStandardOutput=$true
+    $psi.RedirectStandardError=$true
+    $psi.CreateNoWindow=$true
+
+    $p=New-Object System.Diagnostics.Process
+    $p.StartInfo=$psi
+    $null=$p.Start()
+
+    $stdout=$p.StandardOutput.ReadToEnd()
+    $stderr=$p.StandardError.ReadToEnd()
+    $p.WaitForExit()
+
+    [pscustomobject]@{
+        ExitCode=$p.ExitCode
+        StdOut=$stdout.Trim()
+        StdErr=$stderr.Trim()
+    }
+}
 
 $Checks=@()
 $Failures=0
@@ -52,12 +78,11 @@ function Add-Check {
         details=$Details
     }
 
-    switch($Status){
-        'PASS' {$null}
-        'WARN' {$script:Warnings++}
-        'FAIL' {$script:Failures++}
-    }
+    if($Status -eq 'WARN'){$script:Warnings++}
+    if($Status -eq 'FAIL'){$script:Failures++}
 }
+
+Write-Section 'MELROSEOS ENTERPRISE AUDITOR'
 
 # --------------------------------------------------------------------
 # Repository
@@ -65,6 +90,7 @@ function Add-Check {
 Write-Section 'REPOSITORY'
 
 $RepoExists=Test-Path -LiteralPath (Join-Path $Root '.git')
+
 if($RepoExists){
     Write-Pass $Root
     Add-Check 'Repository' 'Git repository exists' 'PASS' $Root
@@ -74,33 +100,56 @@ if($RepoExists){
 }
 
 if($RepoExists){
-    $Branch=(& git -C $Root branch --show-current 2>$null).Trim()
+    $BranchResult=Invoke-GitAudit @('branch','--show-current')
+    $LocalResult=Invoke-GitAudit @('rev-parse','HEAD')
+    $RemoteResult=Invoke-GitAudit @('rev-parse','origin/main')
+    $StatusResult=Invoke-GitAudit @('status','--porcelain=v1','--untracked-files=all')
+
+    $Branch=$BranchResult.StdOut
+    $Local=$LocalResult.StdOut
+    $Remote=$RemoteResult.StdOut
+
     if($Branch -eq 'main'){
-        Write-Pass "Branch main"
+        Write-Pass 'Branch main'
         Add-Check 'Repository' 'Branch main' 'PASS' $Branch
     }else{
         Write-Fail "Branch=$Branch"
         Add-Check 'Repository' 'Branch main' 'FAIL' $Branch
     }
 
-    $Local=(& git -C $Root rev-parse HEAD 2>$null).Trim()
-    $Remote=(& git -C $Root rev-parse origin/main 2>$null).Trim()
-
     if($Local -and $Remote -and $Local -eq $Remote){
-        Write-Pass "Local/remote sync"
+        Write-Pass 'Local/remote sync'
         Add-Check 'Repository' 'Local/remote sync' 'PASS' $Local
     }else{
-        Write-Fail "Local/remote mismatch"
+        Write-Fail 'Local/remote mismatch'
         Add-Check 'Repository' 'Local/remote sync' 'FAIL' "Local=$Local Remote=$Remote"
     }
 
-    $StatusLines=@(& git -C $Root status --porcelain=v1 2>$null)
+    $GitWarnings=@(
+        $BranchResult.StdErr,
+        $LocalResult.StdErr,
+        $RemoteResult.StdErr,
+        $StatusResult.StdErr
+    )|Where-Object{-not [string]::IsNullOrWhiteSpace($_)}
+
+    foreach($GitWarning in $GitWarnings){
+        Write-Warn $GitWarning
+    }
+
+    $StatusLines=@()
+    if(-not [string]::IsNullOrWhiteSpace($StatusResult.StdOut)){
+        $StatusLines=@(
+            $StatusResult.StdOut -split "`r?`n" |
+            Where-Object{-not [string]::IsNullOrWhiteSpace($_)}
+        )
+    }
+
     $SourceChanges=@()
     $RuntimeChanges=@()
 
     foreach($Line in $StatusLines){
-        $N=[string]$Line
-        $Norm=$N.Replace('\','/')
+        $Norm=([string]$Line).Replace('\','/')
+
         $Runtime=(
             $Norm.Contains('/Reports/') -or
             $Norm.Contains('/Logs/') -or
@@ -110,7 +159,12 @@ if($RepoExists){
             $Norm.Contains('UpdateManager/Registry/updates.json') -or
             $Norm.Contains('UpdateManager/Registry/update-history.json')
         )
-        if($Runtime){$RuntimeChanges+=$N}else{$SourceChanges+=$N}
+
+        if($Runtime){
+            $RuntimeChanges += $Line
+        }else{
+            $SourceChanges += $Line
+        }
     }
 
     if($SourceChanges.Count -eq 0){
@@ -128,19 +182,36 @@ if($RepoExists){
 }
 
 # --------------------------------------------------------------------
-# Key enterprise subsystems
+# Subsystems
 # --------------------------------------------------------------------
 Write-Section 'SUBSYSTEM INVENTORY'
 
 $Subsystems=@(
-    [pscustomobject]@{name='Lead Migration';path='tools\LeadMigration';cert='tools\LeadMigration\Certification\Reports\CERT-015-Final.json'},
-    [pscustomobject]@{name='Developer Console';path='DeveloperConsole';cert=''},
-    [pscustomobject]@{name='Package Manager';path='PackageManager';cert='PackageManager\Certification\Reports\PKGCERT-012-Final.json'},
-    [pscustomobject]@{name='Update Manager';path='UpdateManager';cert=''}
+    [pscustomobject]@{
+        name='Lead Migration'
+        path='tools\LeadMigration'
+        cert='tools\LeadMigration\Certification\Reports\CERT-015-Final.json'
+    },
+    [pscustomobject]@{
+        name='Developer Console'
+        path='DeveloperConsole'
+        cert=''
+    },
+    [pscustomobject]@{
+        name='Package Manager'
+        path='PackageManager'
+        cert='PackageManager\Certification\Reports\PKGCERT-012-Final.json'
+    },
+    [pscustomobject]@{
+        name='Update Manager'
+        path='UpdateManager'
+        cert=''
+    }
 )
 
 foreach($Subsystem in $Subsystems){
     $Full=Join-Path $Root $Subsystem.path
+
     if(Test-Path -LiteralPath $Full){
         Write-Pass "$($Subsystem.name) structure"
         Add-Check $Subsystem.name 'Structure exists' 'PASS' $Full
@@ -150,15 +221,18 @@ foreach($Subsystem in $Subsystems){
         continue
     }
 
-    if($Subsystem.cert){
+    if(-not [string]::IsNullOrWhiteSpace($Subsystem.cert)){
         $CertPath=Join-Path $Root $Subsystem.cert
+
         if(Test-Path -LiteralPath $CertPath){
             try{
                 $Cert=Get-Content -LiteralPath $CertPath -Raw|ConvertFrom-Json
-                $Certified=([bool]$Cert.passed)
+                $Certified=[bool]$Cert.passed
+
                 if($Cert.PSObject.Properties.Name -contains 'overallStatus'){
                     $Certified=$Certified -and ([string]$Cert.overallStatus -eq 'CERTIFIED')
                 }
+
                 if($Certified){
                     Write-Pass "$($Subsystem.name) certification"
                     Add-Check $Subsystem.name 'Certification' 'PASS' $CertPath
@@ -181,18 +255,20 @@ foreach($Subsystem in $Subsystems){
 }
 
 # --------------------------------------------------------------------
-# PowerShell source inventory and syntax
+# PowerShell source
 # --------------------------------------------------------------------
 Write-Section 'POWERSHELL SOURCE HEALTH'
 
-$PSFiles=@(Get-ChildItem -LiteralPath $Root -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue |
+$PSFiles=@(
+    Get-ChildItem -LiteralPath $Root -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue |
     Where-Object{
         $_.FullName -notmatch '\\Archive\\' -and
         $_.FullName -notmatch '\\Reports\\' -and
         $_.FullName -notmatch '\\Logs\\' -and
         $_.FullName -notmatch '\\Snapshots\\' -and
         $_.FullName -notmatch '\\Temp\\'
-    })
+    }
+)
 
 $SyntaxFailures=@()
 $PlaceholderFiles=@()
@@ -200,6 +276,7 @@ $PlaceholderFiles=@()
 foreach($File in $PSFiles){
     $Tokens=$null
     $Errors=$null
+
     [System.Management.Automation.Language.Parser]::ParseFile(
         $File.FullName,
         [ref]$Tokens,
@@ -214,6 +291,7 @@ foreach($File in $PSFiles){
     }
 
     $Text=[IO.File]::ReadAllText($File.FullName)
+
     $LooksPlaceholder=(
         $File.Length -lt 250 -or
         $Text -match '(?i)\bplaceholder\b' -or
@@ -239,12 +317,14 @@ if($PlaceholderFiles.Count -eq 0){
     Add-Check 'Source' 'Placeholder detection' 'PASS' "$($PSFiles.Count) files checked"
 }else{
     Write-Warn "$($PlaceholderFiles.Count) likely placeholder(s) detected"
-    foreach($File in $PlaceholderFiles){Write-Warn $File}
+    foreach($File in $PlaceholderFiles){
+        Write-Warn $File
+    }
     Add-Check 'Source' 'Placeholder detection' 'WARN' ($PlaceholderFiles -join ' | ')
 }
 
 # --------------------------------------------------------------------
-# Update Manager focused audit
+# Update Manager
 # --------------------------------------------------------------------
 Write-Section 'MOS5-019 UPDATE MANAGER'
 
@@ -258,19 +338,24 @@ $Small=@()
 
 if(Test-Path -LiteralPath $UpdCore){
     $Found++
-    if((Get-Item -LiteralPath $UpdCore).Length -lt 500){$Small+=$UpdCore}
+    if((Get-Item -LiteralPath $UpdCore).Length -lt 500){
+        $Small += $UpdCore
+    }
 }else{
-    $Missing+=$UpdCore
+    $Missing += $UpdCore
 }
 
 for($i=1;$i -le 20;$i++){
     $Prefix='UPD-{0:D3}_' -f $i
     $File=Get-ChildItem -LiteralPath $UpdScripts -Filter "$Prefix*.ps1" -File -ErrorAction SilentlyContinue|Select-Object -First 1
+
     if($File){
         $Found++
-        if($File.Length -lt 500){$Small+=$File.FullName}
+        if($File.Length -lt 500){
+            $Small += $File.FullName
+        }
     }else{
-        $Missing+="$Prefix*.ps1"
+        $Missing += "$Prefix*.ps1"
     }
 }
 
@@ -291,14 +376,17 @@ if($Small.Count -eq 0){
 }
 
 $UpdConfig=Join-Path $Root 'UpdateManager\Config\UpdateManager.config'
+
 if(Test-Path -LiteralPath $UpdConfig){
     $ConfigText=Get-Content -LiteralPath $UpdConfig -Raw
+
     $SafetyPass=(
         $ConfigText -match '(?m)^MODE=SAFE\s*$' -and
         $ConfigText -match '(?m)^AUTO_DOWNLOAD=FALSE\s*$' -and
         $ConfigText -match '(?m)^AUTO_INSTALL=FALSE\s*$' -and
         $ConfigText -match '(?m)^DESTRUCTIVE_ACTIONS=FALSE\s*$'
     )
+
     if($SafetyPass){
         Write-Pass 'Update Manager safe-mode configuration'
         Add-Check 'Update Manager' 'Safe-mode configuration' 'PASS' $UpdConfig
@@ -312,18 +400,20 @@ if(Test-Path -LiteralPath $UpdConfig){
 }
 
 # --------------------------------------------------------------------
-# Scoring and report
+# Final
 # --------------------------------------------------------------------
 Write-Section 'FINAL ENTERPRISE AUDIT'
 
 $Total=$Checks.Count
-$PassCount=@($Checks|Where-Object status -eq 'PASS').Count
-$WarnCount=@($Checks|Where-Object status -eq 'WARN').Count
-$FailCount=@($Checks|Where-Object status -eq 'FAIL').Count
+$PassCount=@($Checks|Where-Object{$_.status -eq 'PASS'}).Count
+$WarnCount=@($Checks|Where-Object{$_.status -eq 'WARN'}).Count
+$FailCount=@($Checks|Where-Object{$_.status -eq 'FAIL'}).Count
 
 $Score=if($Total -gt 0){
     [math]::Round((($PassCount + ($WarnCount*0.5)) / $Total)*100,1)
-}else{0}
+}else{
+    0
+}
 
 $Overall=if($FailCount -eq 0){
     if($WarnCount -eq 0){'HEALTHY'}else{'HEALTHY_WITH_WARNINGS'}
@@ -334,7 +424,7 @@ $Overall=if($FailCount -eq 0){
 $Report=[ordered]@{
     release='MOS5-020'
     module='EA-001'
-    version='1.0.0'
+    version='1.0.1'
     generatedAt=(Get-Date).ToString('o')
     repository=$Root
     overallStatus=$Overall
