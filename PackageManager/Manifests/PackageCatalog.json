@@ -1,0 +1,11 @@
+{
+  "release": "MOS5-018",
+  "packages": [
+    {"id":"lead-migration","name":"Lead Migration Engine","status":"CERTIFIED","source":"tools\\LeadMigration"},
+    {"id":"crm","name":"CRM Engine","status":"REGISTERED","source":"PROJECTS\\CRM"},
+    {"id":"bcc","name":"Broker Command Center","status":"REGISTERED","source":"PROJECTS\\BCC"},
+    {"id":"education","name":"Education","status":"REGISTERED","source":"PROJECTS\\EDU"},
+    {"id":"intake","name":"Intake","status":"REGISTERED","source":"PROJECTS\\INTAKE"},
+    {"id":"verify","name":"Verification","status":"REGISTERED","source":"PROJECTS\\VERIFY"}
+  ]
+}
