@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MelroseOS Enterprise Core
  * File: CORE-15_EmailComplianceGate.gs
  * Release: MOS5-CORE-15
@@ -33,7 +33,12 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.0.0';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.1.0';
+
+const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
+  '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
+const MGR_EMAIL_BUSINESS_CARD_CID =
+  'mgrBusinessCard';
 
 const MGR_EMAIL_CFG = Object.freeze({
   PROPERTY_POSTAL_ADDRESS: 'MGR_EMAIL_POSTAL_ADDRESS',
@@ -124,7 +129,17 @@ function MGR_EMAIL_send(message) {
   if (message.cc) options.cc = message.cc;
   if (message.bcc) options.bcc = message.bcc;
   if (message.attachments) options.attachments = message.attachments;
-  if (message.inlineImages) options.inlineImages = message.inlineImages;
+  const complianceInlineImages =
+    MGR_EMAIL_getComplianceInlineImages_(
+      message.inlineImages || {}
+    );
+
+  if (
+    complianceInlineImages &&
+    Object.keys(complianceInlineImages).length
+  ) {
+    options.inlineImages = complianceInlineImages;
+  }
 
   GmailApp.sendEmail(to, subject, plainBody, options);
 
@@ -456,19 +471,24 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
 
     '<div style="margin-bottom:10px;">',
     '<a href="' + MGR_EMAIL_escapeAttr_(urls.website) + '" style="color:#172033;">Website</a>',
-    ' &nbsp;•&nbsp; ',
+    ' &nbsp;â€¢&nbsp; ',
     '<a href="' + MGR_EMAIL_escapeAttr_(urls.consultation) + '" style="color:#172033;">Schedule Consultation</a>',
-    ' &nbsp;•&nbsp; ',
+    ' &nbsp;â€¢&nbsp; ',
     '<a href="' + MGR_EMAIL_escapeAttr_(urls.academy) + '" style="color:#172033;">Request Academy Access</a>',
+    '</div>',
+
+    '<div style="margin:0 0 16px;">',
+    '<img src="cid:mgrBusinessCard" alt="Melrose Group Realty business card" ',
+    'style="display:block;max-width:420px;width:100%;height:auto;margin:0 auto;border:0;">',
     '</div>',
 
     '<div>',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.BROKERAGE_NAME),
     '<br>',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.LICENSE_TEXT),
-    ' • ',
+    ' â€¢ ',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.OFFICE_PHONE),
-    ' • ',
+    ' â€¢ ',
     MGR_EMAIL_escapeHtml_(MGR_EMAIL_CFG.LOCATION),
     '<br>',
     MGR_EMAIL_escapeHtml_(postal),
@@ -508,8 +528,8 @@ function MGR_EMAIL_buildPlainText_(body, urls) {
     'Request Academy Access: ' + urls.academy,
     '',
     MGR_EMAIL_CFG.BROKERAGE_NAME,
-    MGR_EMAIL_CFG.LICENSE_TEXT + ' • ' +
-      MGR_EMAIL_CFG.OFFICE_PHONE + ' • ' +
+    MGR_EMAIL_CFG.LICENSE_TEXT + ' â€¢ ' +
+      MGR_EMAIL_CFG.OFFICE_PHONE + ' â€¢ ' +
       MGR_EMAIL_CFG.LOCATION,
     postal,
     '',
@@ -703,9 +723,65 @@ function MGR_EMAIL_escapeAttr_(value) {
   return MGR_EMAIL_escapeHtml_(value);
 }
 
+
+/**
+ * Adds the brokerage business card to every compliant outbound email.
+ * Existing caller-provided inline images are preserved.
+ */
+function MGR_EMAIL_getComplianceInlineImages_(existing) {
+  const images = {};
+
+  Object.keys(existing || {}).forEach(function(key) {
+    images[key] = existing[key];
+  });
+
+  try {
+    const file = DriveApp.getFileById(
+      MGR_EMAIL_BUSINESS_CARD_FILE_ID
+    );
+
+    images[MGR_EMAIL_BUSINESS_CARD_CID] =
+      file.getBlob();
+  } catch (err) {
+    throw new Error(
+      'EMAIL_COMPLIANCE_BLOCK: Business card asset could not be loaded. ' +
+      err.message
+    );
+  }
+
+  return images;
+}
+
+function MGR_EMAIL_businessCardDiagnostics() {
+  try {
+    const file = DriveApp.getFileById(
+      MGR_EMAIL_BUSINESS_CARD_FILE_ID
+    );
+
+    const blob = file.getBlob();
+
+    return {
+      success: true,
+      fileId: MGR_EMAIL_BUSINESS_CARD_FILE_ID,
+      name: file.getName(),
+      contentType: blob.getContentType(),
+      size: blob.getBytes().length,
+      cid: MGR_EMAIL_BUSINESS_CARD_CID,
+      timestamp: new Date().toISOString()
+    };
+  } catch (err) {
+    return {
+      success: false,
+      fileId: MGR_EMAIL_BUSINESS_CARD_FILE_ID,
+      error: err.message,
+      timestamp: new Date().toISOString()
+    };
+  }
+}
 function MGR_EMAIL_assertObject_(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error((label || 'Value') + ' must be an object.');
   }
   return value;
 }
+
