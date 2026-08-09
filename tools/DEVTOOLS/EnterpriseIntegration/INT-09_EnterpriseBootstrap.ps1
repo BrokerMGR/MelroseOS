@@ -7,63 +7,145 @@ if (!(Test-Path $Reports)) {
     New-Item -ItemType Directory -Path $Reports -Force | Out-Null
 }
 
-$Modules = @(
-    "CrossProjectHealth.json",
-    "DependencyResolver.json",
-    "ConfigurationValidation.json",
-    "SharedDataContracts.json",
-    "CommunicationsIntegration.json",
-    "RoutingIntegration.json",
-    "DashboardIntegration.json",
-    "HistoricalImportReadiness.json",
-    "EndToEndIntegrationDiagnostics.json"
+$Scripts = @(
+    @{
+        Name   = "INT-00_CrossProjectHealth.ps1"
+        Report = "CrossProjectHealth.json"
+    },
+    @{
+        Name   = "INT-01_DependencyResolver.ps1"
+        Report = "DependencyResolver.json"
+    },
+    @{
+        Name   = "INT-02_ConfigurationValidator.ps1"
+        Report = "ConfigurationValidation.json"
+    },
+    @{
+        Name   = "INT-03_SharedDataContracts.ps1"
+        Report = "SharedDataContracts.json"
+    },
+    @{
+        Name   = "INT-04_CommunicationsIntegration.ps1"
+        Report = "CommunicationsIntegration.json"
+    },
+    @{
+        Name   = "INT-05_RoutingIntegration.ps1"
+        Report = "RoutingIntegration.json"
+    },
+    @{
+        Name   = "INT-06_DashboardIntegration.ps1"
+        Report = "DashboardIntegration.json"
+    },
+    @{
+        Name   = "INT-07_HistoricalImportReadiness.ps1"
+        Report = "HistoricalImportReadiness.json"
+    },
+    @{
+        Name   = "INT-08_EndToEndDiagnostics.ps1"
+        Report = "EndToEndIntegrationDiagnostics.json"
+    }
 )
 
 $Results = @()
 $Passed = 0
 
-foreach ($Module in $Modules) {
+foreach ($Item in $Scripts) {
 
-    $Path = Join-Path $Reports $Module
+    $ScriptPath = Join-Path $Root $Item.Name
+    $ReportPath = Join-Path $Reports $Item.Report
 
-    $Success = $false
-    $Status = "MISSING"
+    Write-Host ""
+    Write-Host "Running $($Item.Name)"
 
-    if (Test-Path -LiteralPath $Path) {
+    $ScriptExists =
+        Test-Path -LiteralPath $ScriptPath
+
+    $ExitCode = 999
+
+    if ($ScriptExists) {
+
+        & powershell `
+            -NoProfile `
+            -ExecutionPolicy Bypass `
+            -File $ScriptPath
+
+        $ExitCode = $LASTEXITCODE
+
+    }
+
+    $ReportExists =
+        Test-Path -LiteralPath $ReportPath
+
+    $ReportStatus = "MISSING"
+
+    if ($ReportExists) {
 
         try {
 
             $Data =
                 Get-Content `
-                    -LiteralPath $Path `
+                    -LiteralPath $ReportPath `
                     -Raw |
                 ConvertFrom-Json
 
-            $Status = [string]$Data.status
-
-            if ($Status -eq "PASS") {
-                $Success = $true
-                $Passed++
+            if ($Data.status) {
+                $ReportStatus = [string]$Data.status
+            }
+            elseif ($ExitCode -eq 0) {
+                $ReportStatus = "PASS"
+            }
+            else {
+                $ReportStatus = "UNKNOWN"
             }
 
         }
         catch {
 
-            $Status = "INVALID"
+            $ReportStatus = "INVALID"
 
         }
 
     }
 
+    $Success =
+        $ScriptExists -and
+        $ExitCode -eq 0 -and
+        $ReportExists -and
+        $ReportStatus -eq "PASS"
+
+    if ($Success) {
+        $Passed++
+    }
+
     $Results += [pscustomobject]@{
-        Module = $Module
-        Status = $Status
-        Passed = $Success
+
+        Module =
+            $Item.Name
+
+        ScriptExists =
+            $ScriptExists
+
+        ExitCode =
+            $ExitCode
+
+        Report =
+            $Item.Report
+
+        ReportExists =
+            $ReportExists
+
+        Status =
+            $ReportStatus
+
+        Passed =
+            $Success
+
     }
 
 }
 
-$Failed = $Modules.Count - $Passed
+$Failed =
+    $Scripts.Count - $Passed
 
 $Overall =
     if ($Failed -eq 0) {
@@ -79,25 +161,51 @@ $Out =
         "EnterpriseIntegrationBootstrap.json"
 
 [ordered]@{
-    subsystem = "ENTERPRISE_INTEGRATION"
-    release = "MOS5-015-INT-010"
-    version = "1.0.0"
-    generatedAt = (Get-Date).ToString("o")
-    totalModules = $Modules.Count
-    passed = $Passed
-    failed = $Failed
-    status = $Overall
+
+    subsystem =
+        "ENTERPRISE_INTEGRATION"
+
+    release =
+        "MOS5-015-INT-010"
+
+    version =
+        "1.1.0"
+
+    generatedAt =
+        (Get-Date).ToString("o")
+
+    totalModules =
+        $Scripts.Count
+
+    passed =
+        $Passed
+
+    failed =
+        $Failed
+
+    status =
+        $Overall
 
     enterpriseFrameworkComplete =
         ($Overall -eq "PASS")
 
-    productionEnabled = $false
-    outboundBlocked = $true
-    safetyLockEnabled = $true
-    historicalImportEnabled = $false
-    liveRoutingEnabled = $false
+    productionEnabled =
+        $false
 
-    modules = $Results
+    outboundBlocked =
+        $true
+
+    safetyLockEnabled =
+        $true
+
+    historicalImportEnabled =
+        $false
+
+    liveRoutingEnabled =
+        $false
+
+    modules =
+        $Results
 
 } |
 ConvertTo-Json -Depth 10 |
@@ -112,29 +220,31 @@ Write-Host "========================================"
 Write-Host ""
 
 $Results |
-Format-Table Module,Status,Passed -AutoSize
+Format-Table `
+    Module,
+    ScriptExists,
+    ReportExists,
+    Status,
+    Passed `
+    -AutoSize
 
 Write-Host ""
-Write-Host "Completed : $Passed of $($Modules.Count)"
+Write-Host "Completed : $Passed of $($Scripts.Count)"
 Write-Host "Failed    : $Failed"
 Write-Host "Status    : $Overall"
 Write-Host ""
-
 Write-Host "Framework Complete : $($Overall -eq 'PASS')"
 Write-Host "Production         : BLOCKED"
 Write-Host "Outbound           : BLOCKED"
 Write-Host "Safety Lock        : ENABLED"
 Write-Host ""
-
 Write-Host "Report:"
 Write-Host $Out
 Write-Host ""
 
 if ($Overall -eq "PASS") {
-
     Write-Host "[PASS]"
     exit 0
-
 }
 
 Write-Host "[FAIL]"

@@ -1,0 +1,128 @@
+﻿{
+    "generatedAt":  "2026-08-06T22:31:24.5072593-05:00",
+    "repositoryRoot":  "D:\\MelroseOS\\GitHub\\MelroseOS",
+    "projectCount":  10,
+    "mappedCount":  10,
+    "projects":  [
+                     {
+                         "projectName":  "ANALYTICS",
+                         "mapped":  true,
+                         "scriptId":  "1mqRPOAnCfIrSIILX6SrT7PPPi02gv1H0kpFN-5gABtJC-pFcbZ0xJhDI",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\ANALYTICS",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1mqRPOAnCfIrSIILX6SrT7PPPi02gv1H0kpFN-5gABtJC-pFcbZ0xJhDI/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "ARCHIVE",
+                         "mapped":  true,
+                         "scriptId":  "1ual3-PPEc66CiE_kK03W2GgQoqk_S938XYKyzh_97GYR4IWzps3Z6Pv4",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\ARCHIVE",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1ual3-PPEc66CiE_kK03W2GgQoqk_S938XYKyzh_97GYR4IWzps3Z6Pv4/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "BCC",
+                         "mapped":  true,
+                         "scriptId":  "1dxpFe_3GDgloxmZDxS33WiMpr8Fq8xjTLEHVW-x94ya4r0LNuZFiH74I",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\BCC",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1dxpFe_3GDgloxmZDxS33WiMpr8Fq8xjTLEHVW-x94ya4r0LNuZFiH74I/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "CORE",
+                         "mapped":  true,
+                         "scriptId":  "1dWl5ZKQ531GF3TltgAS9WHSElWXVeyhKiLjEc9cSnt3IOCyBWLi6Sy3Z",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\CORE",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1dWl5ZKQ531GF3TltgAS9WHSElWXVeyhKiLjEc9cSnt3IOCyBWLi6Sy3Z/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "CRM",
+                         "mapped":  true,
+                         "scriptId":  "1WlbanBGbO_Z_p3DvwLhBWzmLJ0F4FODIvx4AtvOoiQItZilRHW_2m_Rd",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\CRM",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1WlbanBGbO_Z_p3DvwLhBWzmLJ0F4FODIvx4AtvOoiQItZilRHW_2m_Rd/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "EDU",
+                         "mapped":  true,
+                         "scriptId":  "1rBa7MNjRAjEJo_l678v1AXgfe7P4b6pqhtGW5QK-0w4HqOfeTx2Oml0V",
+                         "parentId":  "1v0zIdm3RogW9N679zfhhyZh2Loxd7FnV54UHzGAKEhw",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\EDU",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1rBa7MNjRAjEJo_l678v1AXgfe7P4b6pqhtGW5QK-0w4HqOfeTx2Oml0V/edit",
+                         "containerUrl":  "https://docs.google.com/spreadsheets/d/1v0zIdm3RogW9N679zfhhyZh2Loxd7FnV54UHzGAKEhw/edit"
+                     },
+                     {
+                         "projectName":  "INTAKE",
+                         "mapped":  true,
+                         "scriptId":  "1fq5pfMP2McI46AnSTU37MWgKyavtfjZb3hwywJWuy8ETVs-LNEanTJwY",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\INTAKE",
+                         "title":  "MOS5-010 Enterprise Intake Intelligence",
+                         "user":  "",
+                         "mode":  "standalone",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1fq5pfMP2McI46AnSTU37MWgKyavtfjZb3hwywJWuy8ETVs-LNEanTJwY/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "MARKETING",
+                         "mapped":  true,
+                         "scriptId":  "1jqUR4xA4y9yK1amiQ1eCIMmkOb0t5UBilNVa8YkyryBSnpFRYV_GqXtU",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\MARKETING",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1jqUR4xA4y9yK1amiQ1eCIMmkOb0t5UBilNVa8YkyryBSnpFRYV_GqXtU/edit",
+                         "containerUrl":  ""
+                     },
+                     {
+                         "projectName":  "VERIFY",
+                         "mapped":  true,
+                         "scriptId":  "1V2kqK90MMBD48xoCdwGUK1-v8jKC33wEszGAgv38YCr--AbB7ucOdrrW",
+                         "parentId":  "1wmaH2KVOek9brDNFaKHF3USyYJ7Ma3UQa3xvZvwMcUw",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\VERIFY",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1V2kqK90MMBD48xoCdwGUK1-v8jKC33wEszGAgv38YCr--AbB7ucOdrrW/edit",
+                         "containerUrl":  "https://docs.google.com/spreadsheets/d/1wmaH2KVOek9brDNFaKHF3USyYJ7Ma3UQa3xvZvwMcUw/edit"
+                     },
+                     {
+                         "projectName":  "WEBSITE",
+                         "mapped":  true,
+                         "scriptId":  "1gbTJrTrD46FQsnrNvWr9_8Z2NA5Rwn5AgchEDK-JIbjv_acY2iPN94oP",
+                         "parentId":  "",
+                         "projectFolder":  "D:\\MelroseOS\\GitHub\\MelroseOS\\PROJECTS\\WEBSITE",
+                         "title":  "",
+                         "user":  "",
+                         "mode":  "",
+                         "appsScriptUrl":  "https://script.google.com/home/projects/1gbTJrTrD46FQsnrNvWr9_8Z2NA5Rwn5AgchEDK-JIbjv_acY2iPN94oP/edit",
+                         "containerUrl":  ""
+                     }
+                 ]
+}

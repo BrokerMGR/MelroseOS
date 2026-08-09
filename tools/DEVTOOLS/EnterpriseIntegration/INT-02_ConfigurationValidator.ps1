@@ -14,66 +14,160 @@ Get-ChildItem $Projects -Directory | Sort-Object Name | ForEach-Object {
 
     $Project = $_
 
+    $Src = Join-Path $Project.FullName "src"
     $Clasp = Join-Path $Project.FullName ".clasp.json"
 
-    $Manifest = Join-Path $Project.FullName "src\appsscript.json"
+    $SourceFiles = @()
 
-    if(!(Test-Path $Manifest)){
-        $Manifest = Join-Path $Project.FullName "appsscript.json"
+    if (Test-Path -LiteralPath $Src) {
+
+        $SourceFiles =
+            @(
+                Get-ChildItem `
+                    -LiteralPath $Src `
+                    -Recurse `
+                    -File `
+                    -Include *.gs,*.js `
+                    -ErrorAction SilentlyContinue
+            )
+
     }
 
-    $Results += [pscustomobject]@{
+    # Ignore placeholder project folders that have
+    # neither Apps Script source nor a clasp mapping.
+    if (
+        $SourceFiles.Count -eq 0 -and
+        !(Test-Path -LiteralPath $Clasp)
+    ) {
+        return
+    }
 
-        Project = $Project.Name
+    $Manifest =
+        Join-Path `
+            $Project.FullName `
+            "src\appsscript.json"
 
-        Clasp = Test-Path $Clasp
+    if (!(Test-Path -LiteralPath $Manifest)) {
 
-        Manifest = Test-Path $Manifest
+        $Manifest =
+            Join-Path `
+                $Project.FullName `
+                "appsscript.json"
 
-        Status = if(
-            (Test-Path $Clasp) -and
-            (Test-Path $Manifest)
-        ){
+    }
+
+    $ClaspExists =
+        Test-Path -LiteralPath $Clasp
+
+    $ManifestExists =
+        Test-Path -LiteralPath $Manifest
+
+    $Status =
+        if (
+            $ClaspExists -and
+            $ManifestExists -and
+            $SourceFiles.Count -gt 0
+        ) {
             "PASS"
         }
-        else{
+        else {
             "FAIL"
         }
 
-    }
+    $Results +=
+        [pscustomobject]@{
+
+            Project =
+                $Project.Name
+
+            Clasp =
+                $ClaspExists
+
+            Manifest =
+                $ManifestExists
+
+            SourceFiles =
+                $SourceFiles.Count
+
+            Status =
+                $Status
+
+        }
 
 }
 
 $Passed =
-@($Results|Where-Object{$_.Status -eq "PASS"}).Count
+    @(
+        $Results |
+        Where-Object {
+            $_.Status -eq "PASS"
+        }
+    ).Count
 
 $Failed =
-@($Results|Where-Object{$_.Status -eq "FAIL"}).Count
+    @(
+        $Results |
+        Where-Object {
+            $_.Status -eq "FAIL"
+        }
+    ).Count
 
 $Out =
-Join-Path $Reports "ConfigurationValidation.json"
+    Join-Path `
+        $Reports `
+        "ConfigurationValidation.json"
 
 [ordered]@{
 
-    generatedAt=(Get-Date).ToString("o")
+    generatedAt =
+        (Get-Date).ToString("o")
 
-    passed=$Passed
+    totalProjects =
+        $Results.Count
 
-    failed=$Failed
+    passed =
+        $Passed
 
-    status=if($Failed -eq 0){"PASS"}else{"FAIL"}
+    failed =
+        $Failed
 
-    projects=$Results
+    status =
+        if ($Failed -eq 0) {
+            "PASS"
+        }
+        else {
+            "FAIL"
+        }
+
+    projects =
+        $Results
 
 } |
 ConvertTo-Json -Depth 10 |
-Set-Content $Out
-
-$Results | Format-Table -AutoSize
+Set-Content `
+    -LiteralPath $Out `
+    -Encoding UTF8
 
 Write-Host ""
 
-if($Failed -eq 0){
+$Results |
+    Format-Table `
+        Project,
+        Clasp,
+        Manifest,
+        SourceFiles,
+        Status `
+        -AutoSize
+
+Write-Host ""
+Write-Host "Passed : $Passed"
+Write-Host "Failed : $Failed"
+Write-Host ""
+Write-Host "Report:"
+Write-Host $Out
+Write-Host ""
+
+if ($Failed -eq 0) {
 
     Write-Host "[PASS]"
     exit 0

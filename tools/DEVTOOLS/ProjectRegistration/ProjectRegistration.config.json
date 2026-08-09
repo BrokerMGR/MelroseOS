@@ -1,0 +1,20 @@
+{
+  "version": "1.2.0",
+  "projects": {
+    "BCC": {
+      "title": "MOS5-009 Broker Command Center",
+      "mode": "standalone",
+      "user": ""
+    },
+    "EDU": {
+      "title": "MOS5-007 Enterprise Education & Compliance",
+      "mode": "new-sheet",
+      "user": ""
+    },
+    "VERIFY": {
+      "title": "MOS5-008 Enterprise Verification Engine",
+      "mode": "new-sheet",
+      "user": ""
+    }
+  }
+}
