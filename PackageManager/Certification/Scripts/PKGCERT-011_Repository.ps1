@@ -3,8 +3,8 @@ MelroseOS Enterprise
 Package Manager Certification
 Module : PKGCERT-011_Repository
 Release: MOS5-018
-Version: 1.0.3
-Purpose: Certify repository source state while excluding known runtime/generated PackageManager state.
+Version: 1.0.4
+Purpose: Certify repository source state while excluding exact runtime-generated PackageManager state.
 #>
 
 $ErrorActionPreference='Stop'
@@ -17,6 +17,7 @@ if(!(Test-Path -LiteralPath $Common)){
 . $Common
 
 Write-PKGCertHeader 'PKGCERT-011 Repository'
+Write-PKGCertInfo 'Repository validator version 1.0.4'
 
 $Root='D:\MelroseOS\GitHub\MelroseOS'
 
@@ -50,7 +51,7 @@ function Invoke-GitQuiet {
 $BranchResult=Invoke-GitQuiet @('branch','--show-current')
 $HeadResult=Invoke-GitQuiet @('rev-parse','HEAD')
 $OriginResult=Invoke-GitQuiet @('rev-parse','origin/main')
-$StatusResult=Invoke-GitQuiet @('status','--porcelain=v1')
+$StatusResult=Invoke-GitQuiet @('status','--porcelain=v1','--untracked-files=all')
 
 $Branch=$BranchResult.StdOut
 $Head=$HeadResult.StdOut
@@ -64,35 +65,26 @@ if(-not [string]::IsNullOrWhiteSpace($StatusResult.StdOut)){
     )
 }
 
-# Match the path portion of git porcelain lines directly.
-# These are runtime/generated artifacts and must never fail source certification.
-$RuntimeRegexes=@(
-    '^..\s+PackageManager/Registry/',
-    '^..\s+PackageManager/Reports/',
-    '^..\s+PackageManager/Logs/',
-    '^..\s+PackageManager/Snapshots/',
-    '^..\s+PackageManager/Temp/',
-    '^..\s+PackageManager/Packages/Cache/',
-    '^..\s+PackageManager/Packages/Staging/',
-    '^..\s+PackageManager/Packages/Rollback/',
-    '^..\s+PackageManager/Certification/Reports/',
-    '^..\s+PackageManager/Certification/Logs/',
-    '^..\s+PackageManager/Certification/Temp/'
-)
-
 $SourceChanges=@()
 $RuntimeChanges=@()
 
 foreach($Line in $AllChanges){
     $Normalized=$Line.Replace('\','/')
-    $IsRuntime=$false
 
-    foreach($Pattern in $RuntimeRegexes){
-        if($Normalized -match $Pattern){
-            $IsRuntime=$true
-            break
-        }
-    }
+    # Intentionally exact/simple matching. Git status prefix formatting is irrelevant.
+    $IsRuntime = (
+        $Normalized.Contains('PackageManager/Registry/packages.json') -or
+        $Normalized.Contains('PackageManager/Reports/') -or
+        $Normalized.Contains('PackageManager/Logs/') -or
+        $Normalized.Contains('PackageManager/Snapshots/') -or
+        $Normalized.Contains('PackageManager/Temp/') -or
+        $Normalized.Contains('PackageManager/Packages/Cache/') -or
+        $Normalized.Contains('PackageManager/Packages/Staging/') -or
+        $Normalized.Contains('PackageManager/Packages/Rollback/') -or
+        $Normalized.Contains('PackageManager/Certification/Reports/') -or
+        $Normalized.Contains('PackageManager/Certification/Logs/') -or
+        $Normalized.Contains('PackageManager/Certification/Temp/')
+    )
 
     if($IsRuntime){
         $RuntimeChanges += $Line
@@ -154,7 +146,7 @@ foreach($Warning in $Warnings){
 $Report=[ordered]@{
     release='MOS5-018'
     certification='PKGCERT-011'
-    version='1.0.3'
+    version='1.0.4'
     generatedAt=(Get-Date).ToString('o')
     branch=$Branch
     localHead=$Head
