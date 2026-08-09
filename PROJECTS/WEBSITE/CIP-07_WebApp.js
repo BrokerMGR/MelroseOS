@@ -1,5 +1,7 @@
-
-function doGet(e){
+﻿
+function doGet(e) {
+  const unsubscribeResponse = MGR_WEB_tryHandleEmailUnsubscribe(e);
+  if (unsubscribeResponse) return unsubscribeResponse;
   CIP_initializePlatform();
   const t=String(e&&e.parameter&&e.parameter.t?e.parameter.t:"").trim();
   const x=HtmlService.createTemplateFromFile("Portal");x.portalToken=t;
@@ -14,3 +16,4 @@ function CIP_getPortalData(token){
   CIP_logPortalActivity(token,"DASHBOARD_OPEN","","PORTAL",{});
   return{success:true,portalToken:token,portal:{leadId:r.LeadID,leadType:String(p.LeadType||"").toUpperCase(),firstName:p.FirstName||"",fullName:p.FullName||"",assignedAgentName:p.AssignedAgentName||"",assignedAgentEmail:p.AssignedAgentEmail||"",intentScore:Number(r.IntentScore||0),intentLevel:r.IntentLevel||"NEW"},criteria:{parish:p.Parish||"",cityOrArea:p.CityOrArea||"",timeline:p.Timeline||"",budget:p.PriceRangeOrRentBudget||"",bedrooms:p.Bedrooms||"",bathrooms:p.Bathrooms||"",financingStatus:p.FinancingStatus||"",propertyToSellAddress:p.PropertyToSellAddress||""},assumptions:a,vendors:CIP_getVendorsForLead_(p),disclaimers:CIP.DISCLAIMER};
 }
+
