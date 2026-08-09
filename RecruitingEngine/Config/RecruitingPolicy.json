@@ -1,0 +1,42 @@
+{
+  "release": "MOS5-021",
+  "version": "1.0.0",
+  "sendPolicy": {
+    "timezone": "America/Chicago",
+    "days": [
+      "MONDAY",
+      "TUESDAY",
+      "WEDNESDAY",
+      "THURSDAY",
+      "FRIDAY",
+      "SATURDAY"
+    ],
+    "start": "10:00",
+    "end": "16:00",
+    "skipSundays": true,
+    "skipConfiguredHolidays": true,
+    "cadenceCalendarDays": 5
+  },
+  "replyPolicy": {
+    "stopOrUnsubscribe": {
+      "markDoNotContact": true,
+      "markUnsubscribed": true,
+      "sendConfirmation": false,
+      "futureOutbound": "BLOCKED_UNLESS_CONTACT_INITIATES_NEW_MEETING_REQUEST"
+    },
+    "interested": {
+      "stopNurture": true,
+      "brokerFollowUpRequired": true,
+      "autoAcknowledge": true,
+      "firstMeetingMethods": [
+        "ZOOM",
+        "PHONE"
+      ]
+    },
+    "otherReply": {
+      "stopNurture": true,
+      "brokerFollowUpRequired": true,
+      "autoAcknowledge": false
+    }
+  }
+}
