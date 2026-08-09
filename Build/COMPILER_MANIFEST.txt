@@ -1,0 +1,15 @@
+# MelroseOS Compiler Manifest
+
+Version: 0.1
+Repository:
+D:\MelroseOS\GitHub\MelroseOS
+
+Planned package format:
+
+CORE-00.pkg
+CORE-01.pkg
+...
+CRM-000.pkg
+...
+
+Each package will contain the complete production source for one Apps Script file.
