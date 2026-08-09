@@ -1,0 +1,18 @@
+{
+  "release": "MOS5-021",
+  "stages": [
+    "NEW",
+    "PRE_LICENSE",
+    "NURTURING",
+    "LREC_CHECK_PENDING",
+    "REPLIED",
+    "UNSUBSCRIBED",
+    "DNC",
+    "ACTIVE_LICENSE",
+    "ACTIVE_WITH_BROKERAGE",
+    "BROKERAGE_REVIEW_REQUIRED",
+    "ACTIVE_AGENT_HANDOFF",
+    "JOINED_MGR",
+    "STOPPED"
+  ]
+}

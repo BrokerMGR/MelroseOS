@@ -1,0 +1,17 @@
+{
+  "release": "MOS5-021",
+  "logo": {
+    "driveId": "1ds9bSeq8BBigKZeH3RqEW6zcqXOrqNCT",
+    "role": "email_header_logo"
+  },
+  "businessCard": {
+    "role": "inline_signature_image",
+    "mode": "CID_EMBED",
+    "status": "SOURCE_IMAGE_PROVIDED_IN_CHAT"
+  },
+  "palette": {
+    "primary": "NAVY",
+    "accent": "GOLD",
+    "background": "WHITE"
+  }
+}

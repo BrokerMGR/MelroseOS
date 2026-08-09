@@ -1,0 +1,21 @@
+{
+  "release": "MOS5-021",
+  "systemColumns": [
+    "RecruitID",
+    "RecruitStage",
+    "CampaignStatus",
+    "SequenceNumber",
+    "LastEmailSent",
+    "NextEmailDate",
+    "EmailCount",
+    "LastTemplateSent",
+    "LRECStatus",
+    "SponsoringBroker",
+    "LRECLastChecked",
+    "ReplyDetected",
+    "Unsubscribed",
+    "DoNotContact",
+    "ActiveRecruitingQueue",
+    "CampaignNotes"
+  ]
+}

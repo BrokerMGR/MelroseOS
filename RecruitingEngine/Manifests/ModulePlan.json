@@ -1,0 +1,23 @@
+{
+  "release": "MOS5-021",
+  "modules": [
+    "REC-000_Common",
+    "REC-001_SpreadsheetConnector",
+    "REC-002_RecruitSchema",
+    "REC-003_Deduplication",
+    "REC-004_SuppressionGate",
+    "REC-005_EmailBuilder",
+    "REC-006_TemplateRotation",
+    "REC-007_SendScheduler",
+    "REC-008_GmailSender",
+    "REC-009_ReplyMonitor",
+    "REC-010_Unsubscribe",
+    "REC-011_LRECVerifier",
+    "REC-012_StageTransition",
+    "REC-013_ActiveAgentHandoff",
+    "REC-014_Diagnostics",
+    "REC-015_TestMailer",
+    "REC-016_Launch"
+  ],
+  "note": "This scaffold does not create placeholder scripts. Real modules are installed in subsequent batches."
+}
