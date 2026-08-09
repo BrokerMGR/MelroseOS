@@ -1,0 +1,66 @@
+<!--
+MelroseOS Portal Tool Components v1
+Merge these components into the existing Portal.html rendering layer.
+They call the server functions in BNP-02_PortalFinancialTools.gs.
+-->
+
+<section id="buyer-affordability-tool" style="display:none">
+  <h2>Affordability & Payment Planner</h2>
+  <p>Adjust the assumptions below to explore an estimated monthly housing payment.</p>
+  <label>Purchase Price <input id="bnpPrice" type="number"></label>
+  <label>Down Payment % <input id="bnpDown" type="number" step="0.01"></label>
+  <label>Interest Rate % <input id="bnpRate" type="number" step="0.01"></label>
+  <label>Loan Term (Years) <input id="bnpYears" type="number"></label>
+  <label>Annual Property Tax % <input id="bnpTax" type="number" step="0.01"></label>
+  <label>Annual Insurance % <input id="bnpInsurance" type="number" step="0.01"></label>
+  <label>Monthly HOA <input id="bnpHoa" type="number"></label>
+  <button onclick="BNP_UI_calculateBuyer()">Calculate Estimate</button>
+  <div id="bnpBuyerResult"></div>
+</section>
+
+<section id="seller-value-tool" style="display:none">
+  <h2>Home Value Planning Center</h2>
+  <p>Use this planning tool to explore a preliminary value range. For a property-specific pricing analysis, request a comparative market analysis from Melrose Group Realty.</p>
+  <label>Preliminary Estimated Value <input id="bnpSellerEstimate" type="number"></label>
+  <button onclick="BNP_UI_calculateSeller()">Show Planning Range</button>
+  <div id="bnpSellerResult"></div>
+</section>
+
+<script>
+function BNP_UI_money(v) {
+  return Number(v || 0).toLocaleString("en-US",{style:"currency",currency:"USD"});
+}
+
+function BNP_UI_calculateBuyer() {
+  const input = {
+    purchasePrice:document.getElementById("bnpPrice").value,
+    downPaymentPercent:document.getElementById("bnpDown").value,
+    interestRate:document.getElementById("bnpRate").value,
+    loanTermYears:document.getElementById("bnpYears").value,
+    propertyTaxAnnualPercent:document.getElementById("bnpTax").value,
+    homeInsuranceAnnualPercent:document.getElementById("bnpInsurance").value,
+    monthlyHoa:document.getElementById("bnpHoa").value
+  };
+
+  google.script.run.withSuccessHandler(function(r) {
+    document.getElementById("bnpBuyerResult").innerHTML =
+      "<h3>Estimated Monthly Payment: " + BNP_UI_money(r.estimatedTotalMonthlyPayment) + "</h3>" +
+      "<p>Principal & Interest: " + BNP_UI_money(r.estimatedPrincipalAndInterest) + "</p>" +
+      "<p>Estimated Taxes: " + BNP_UI_money(r.estimatedMonthlyTaxes) + "</p>" +
+      "<p>Estimated Insurance: " + BNP_UI_money(r.estimatedMonthlyInsurance) + "</p>" +
+      "<p><small>" + r.disclaimer + "</small></p>";
+  }).BNP_calculateBuyerAffordability(input);
+}
+
+function BNP_UI_calculateSeller() {
+  google.script.run.withSuccessHandler(function(r) {
+    document.getElementById("bnpSellerResult").innerHTML =
+      "<h3>Preliminary Planning Range</h3>" +
+      "<p>" + BNP_UI_money(r.estimatedLow) + " – " + BNP_UI_money(r.estimatedHigh) + "</p>" +
+      "<p><strong>Next step:</strong> " + r.nextStep + "</p>" +
+      "<p><small>" + r.disclaimer + "</small></p>";
+  }).BNP_calculateSellerValueRange({
+    preliminaryEstimate:document.getElementById("bnpSellerEstimate").value
+  });
+}
+</script>

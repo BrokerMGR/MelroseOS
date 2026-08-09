@@ -1,0 +1,25 @@
+
+<section id="rapAcademyCard" style="display:none;border:1px solid #e5e7eb;border-radius:14px;padding:24px;margin-top:24px;">
+<h2>Melrose Group Realty Agent Academy</h2>
+<p>Explore training, tools, and resources available to prospective and affiliated real estate professionals.</p>
+<div id="rapAcademyInstructions"></div><div id="rapAcademyActions"></div>
+<p id="rapAcademyDisclosure" style="font-size:12px;color:#6b7280;margin-top:20px;"></p>
+</section>
+<script>
+function RAP_UI_loadAcademyCard(token,type){
+ type=String(type||"").toUpperCase();
+ if(["RECRUIT","RECRUITING","AGENT","NEW AGENT"].indexOf(type)===-1)return;
+ document.getElementById("rapAcademyCard").style.display="block";
+ google.script.run.withSuccessHandler(s=>RAP_UI_render(s,token)).RAP_getRecruitAcademyState(token);
+}
+function RAP_UI_render(s,token){
+ if(!s||!s.success)return;
+ document.getElementById("rapAcademyInstructions").textContent=s.instructions||"";
+ document.getElementById("rapAcademyDisclosure").textContent=s.disclosure||"";
+ const a=document.getElementById("rapAcademyActions");
+ if(s.approved&&s.academyUrl){a.innerHTML='<a target="_blank" href="'+s.academyUrl+'" style="display:inline-block;padding:12px 20px;background:#172033;color:white;text-decoration:none;border-radius:7px;font-weight:bold;">Open Agent Academy</a>';return;}
+ if(s.pending){a.innerHTML='<button disabled style="padding:12px 20px;">Access Request Under Review</button>';return;}
+ a.innerHTML='<button id="rapRequestBtn" style="padding:12px 20px;background:#172033;color:white;border:0;border-radius:7px;font-weight:bold;">Request Academy Access</button>';
+ document.getElementById("rapRequestBtn").onclick=function(){google.script.run.withSuccessHandler(x=>RAP_UI_render(x,token)).RAP_requestAcademyAccess(token);};
+}
+</script>

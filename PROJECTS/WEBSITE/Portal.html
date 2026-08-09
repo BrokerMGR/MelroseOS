@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Melrose Group Realty Client Portal</title>
+  <style>
+    :root{
+      --navy:#0c1b2a;
+      --gold:#b99a56;
+      --bg:#f5f3ef;
+      --card:#ffffff;
+      --text:#1f2933;
+      --muted:#667085;
+      --line:#e5e7eb;
+      --success:#0f766e;
+      --danger:#b42318;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{background:var(--navy);color:#fff;padding:28px 18px}
+    .wrap{max-width:1180px;margin:auto;padding:22px}
+    .hero h1{margin:0 0 8px;font-size:30px}
+    .hero p{margin:0;color:#d7dde4}
+    .gold{color:var(--gold)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+    .card{background:var(--card);border-radius:16px;padding:22px;box-shadow:0 5px 22px rgba(0,0,0,.08);margin-bottom:18px}
+    .card h2,.card h3{margin-top:0}
+    .btn{display:inline-block;border:0;background:var(--navy);color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;cursor:pointer;font-weight:bold}
+    .btn.gold{background:var(--gold);color:#111}
+    .btn.outline{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    label{display:block;font-size:13px;margin:9px 0 5px;font-weight:bold}
+    input,select,textarea{width:100%;padding:10px 11px;border:1px solid #cfd5dc;border-radius:8px;background:#fff}
+    textarea{min-height:90px}
+    .muted{color:var(--muted);font-size:13px}
+    .pill{display:inline-block;background:#eef1f4;padding:6px 10px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0}
+    .warning{background:#fff7e6;border-left:4px solid var(--gold);padding:13px;font-size:12px;margin-top:16px}
+    .success{background:#ecfdf3;border-left:4px solid var(--success);padding:13px}
+    .hidden{display:none!important}
+    .vendor-card{border:1px solid var(--line);border-radius:14px;padding:16px}
+    .vendor-card img{width:84px;height:84px;object-fit:cover;border-radius:10px}
+    .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px}
+    .kv div:nth-child(odd){font-weight:bold}
+    .section-title{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .metric{font-size:30px;font-weight:bold;color:var(--navy)}
+    .tool-result{background:#f8fafc;border-radius:12px;padding:16px;margin-top:14px}
+    .footer{font-size:12px;color:#667085;padding:24px 0 40px}
+    @media(max-width:640px){
+      .hero h1{font-size:24px}
+      .kv{grid-template-columns:1fr}
+      .wrap{padding:14px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap hero">
+    <h1>Melrose Group Realty <span class="gold">Client Portal</span></h1>
+    <p id="welcome">Loading your personalized dashboard...</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="errorCard" class="card hidden"></div>
+
+  <div id="portal" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">
+          <h2>Your Real Estate Profile</h2>
+          <span id="leadTypePill" class="pill"></span>
+        </div>
+        <div id="criteriaSummary" class="kv"></div>
+      </div>
+
+      <div class="card">
+        <h2>Your Real Estate Professional</h2>
+        <div id="agentCard"></div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" onclick="portalAction('CONTACT_AGENT')">Contact My Agent</button>
+          <button class="btn outline" onclick="portalAction('CONSULTATION_CLICK')">Schedule Consultation</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="buyerSection" class="card hidden">
+      <h2>Buyer Affordability & Payment Planner</h2>
+      <p class="muted">Explore an estimated monthly housing payment using editable planning assumptions.</p>
+      <div class="grid">
+        <div>
+          <label>Purchase Price</label>
+          <input id="buyerPrice" type="number" value="350000">
+
+          <label>Down Payment (%)</label>
+          <input id="buyerDownPct" type="number" step="0.01" value="20">
+
+          <label>Interest Rate (%)</label>
+          <input id="buyerRate" type="number" step="0.01" value="6.5">
+
+          <label>Loan Term (Years)</label>
+          <input id="buyerYears" type="number" value="30">
+
+          <label>Annual Property Tax (%)</label>
+          <input id="buyerTax" type="number" step="0.01" value="1.5">
+
+          <label>Annual Home Insurance (%)</label>
+          <input id="buyerInsurance" type="number" step="0.01" value="5">
+
+          <label>Monthly HOA</label>
+          <input id="buyerHoa" type="number" value="0">
+
+          <button class="btn gold" onclick="calculateBuyer()">Calculate Estimate</button>
+        </div>
+        <div>
+          <h3>Planning Estimate</h3>
+          <div id="buyerResult" class="tool-result">Enter your assumptions and calculate.</div>
+        </div>
+      </div>
+      <div id="buyerDisclaimer" class="warning"></div>
+    </div>
+
+    <div id="sellerSection" class="card hidden">
+      <h2>Seller Home Value Planning Center</h2>
+      <p class="muted">Use this tool for a preliminary planning range, then request a property-specific CMA from Melrose Group Realty.</p>
+      <div class="grid">
+        <div>
+          <label>Property Address</label>
+          <input id="sellerAddress" type="text">
+
+          <label>Preliminary Estimated Value</label>
+          <input id="sellerEstimate" type="number" placeholder="Enter a planning estimate">
+
+          <button class="btn gold" onclick="calculateSeller()">Show Planning Range</button>
+        </div>
+        <div>
+          <h3>Preliminary Value Range</h3>
+          <div id="sellerResult" class="tool-result">Enter a preliminary value to explore a planning range.</div>
+          <div style="margin-top:14px">
+            <button class="btn" onclick="portalAction('VALUATION_REQUESTED')">Request Professional CMA</button>
+          </div>
+        </div>
+      </div>
+      <div id="sellerDisclaimer" class="warning"></div>
+    </div>
+
+    <div id="renterSection" class="card hidden">
+      <h2>Renter Rent vs. Buy Planning Center</h2>
+      <p class="muted">Compare cumulative rent costs and explore whether a homeownership conversation may make sense for you.</p>
+      <div class="grid">
+        <div>
+          <label>Monthly Rent</label>
+          <input id="rentMonthly" type="number" value="1800">
+
+          <label>Years to Compare</label>
+          <input id="rentYears" type="number" value="5">
+
+          <button class="btn gold" onclick="calculateRent()">Estimate Rent Paid</button>
+        </div>
+        <div>
+          <h3>Planning Estimate</h3>
+          <div id="rentResult" class="tool-result">Enter your rent and timeframe.</div>
+        </div>
+      </div>
+      <div class="warning">
+        Buying is not right for everyone. This planning tool is intended only to help you compare estimated costs and consider whether a conversation with a real estate or mortgage professional may be useful.
+      </div>
+    </div>
+
+    <div id="recruitSection" class="card hidden">
+      <h2>Recruit Career Center</h2>
+      <p>Your dashboard is your home base for confidential interview scheduling, brokerage resources, Agent Academy access, and onboarding information.</p>
+
+      <div id="academyCard" class="card" style="box-shadow:none;border:1px solid var(--line)">
+        <h3>Melrose Group Realty Agent Academy</h3>
+        <div id="academyInstructions"></div>
+        <div id="academyActions" style="margin-top:14px"></div>
+        <p id="academyDisclosure" class="muted" style="margin-top:16px"></p>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="portalAction('CONSULTATION_CLICK')">Schedule Confidential Interview</button>
+        <button class="btn outline" onclick="portalAction('CONTACT_AGENT')">Contact the Broker</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Preferred Professional Resources</h2>
+      <p class="muted">Quick access to optional professionals who may be helpful during your real estate journey.</p>
+      <div id="vendors" class="grid"></div>
+      <div id="vendorDisclaimer" class="warning"></div>
+    </div>
+
+    <div class="card">
+      <h2>What Would You Like To Do Next?</h2>
+      <div class="grid">
+        <button class="btn" onclick="portalAction('CONTACT_AGENT')">Ask My Agent a Question</button>
+        <button class="btn" onclick="portalAction('CONSULTATION_CLICK')">Schedule Consultation</button>
+        <button class="btn outline" onclick="portalAction('CRITERIA_UPDATED')">Update My Criteria</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      Licensed in Louisiana • (985) 250-0071 • Mandeville, LA
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN = <?!= JSON.stringify(portalToken) ?>;
+let DATA = null;
+
+google.script.run
+  .withSuccessHandler(renderPortal)
+  .withFailureHandler(showError)
+  .CIP_getPortalData(TOKEN);
+
+function renderPortal(data){
+  if(!data || !data.success){
+    showError(data && data.message ? data.message : "Unable to load portal.");
+    return;
+  }
+
+  DATA = data;
+  document.getElementById("portal").classList.remove("hidden");
+
+  const type = String(data.portal.leadType || "").toUpperCase();
+  document.getElementById("welcome").textContent =
+    "Welcome" + (data.portal.firstName ? ", " + data.portal.firstName : "") +
+    ". Your personalized real estate dashboard is ready.";
+
+  document.getElementById("leadTypePill").textContent = type || "CLIENT";
+
+  renderCriteria(data);
+  renderAgent(data);
+  renderVendors(data);
+
+  document.getElementById("buyerDisclaimer").textContent = data.disclaimers.FINANCIAL || "";
+  document.getElementById("sellerDisclaimer").textContent = data.disclaimers.VALUATION || "";
+  document.getElementById("vendorDisclaimer").textContent = data.disclaimers.VENDORS || "";
+
+  if(type === "BUYER"){
+    document.getElementById("buyerSection").classList.remove("hidden");
+    loadBuyerDefaults();
+  }
+
+  if(type === "SELLER"){
+    document.getElementById("sellerSection").classList.remove("hidden");
+    document.getElementById("sellerAddress").value = data.criteria.propertyToSellAddress || "";
+  }
+
+  if(type === "RENTER"){
+    document.getElementById("renterSection").classList.remove("hidden");
+  }
+
+  if(["RECRUIT","RECRUITING","AGENT","NEW AGENT"].indexOf(type) !== -1){
+    document.getElementById("recruitSection").classList.remove("hidden");
+    loadAcademyState();
+  }
+}
+
+function renderCriteria(data){
+  const c = data.criteria || {};
+  const rows = [
+    ["Lead Type", data.portal.leadType],
+    ["Parish / Area", c.cityOrArea || c.parish],
+    ["Timeline", c.timeline],
+    ["Budget / Price Range", c.budget],
+    ["Bedrooms", c.bedrooms],
+    ["Bathrooms", c.bathrooms],
+    ["Financing Status", c.financingStatus],
+    ["Property", c.propertyToSellAddress]
+  ];
+
+  document.getElementById("criteriaSummary").innerHTML =
+    rows.filter(r => r[1] !== "" && r[1] !== null && r[1] !== undefined)
+      .map(r => `<div>${esc(r[0])}</div><div>${esc(r[1])}</div>`)
+      .join("") || "<div>No additional criteria have been entered yet.</div>";
+}
+
+function renderAgent(data){
+  document.getElementById("agentCard").innerHTML =
+    `<p><strong>${esc(data.portal.assignedAgentName || "Melrose Group Realty")}</strong></p>` +
+    (data.portal.assignedAgentEmail
+      ? `<p><a href="mailto:${attr(data.portal.assignedAgentEmail)}">${esc(data.portal.assignedAgentEmail)}</a></p>`
+      : "");
+}
+
+function renderVendors(data){
+  const vendors = data.vendors || [];
+
+  document.getElementById("vendors").innerHTML =
+    vendors.map(v => `
+      <div class="vendor-card">
+        ${v.photoUrl ? `<img src="${attr(v.photoUrl)}" alt="">` : ""}
+        <h3>${esc(v.contactName || v.companyName || "Professional Resource")}</h3>
+        <p>${esc(v.companyName || "")}</p>
+        <p class="muted">${esc(v.category || "")}</p>
+        ${v.phone ? `<p><a href="tel:${attr(v.phone)}">${esc(v.phone)}</a></p>` : ""}
+        ${v.email ? `<p><a href="mailto:${attr(v.email)}">${esc(v.email)}</a></p>` : ""}
+        ${v.websiteUrl ? `<a class="btn" target="_blank" href="${attr(v.websiteUrl)}" onclick="vendorClick('${js(v.vendorId)}')">Visit Website</a>` : ""}
+        ${v.businessCardUrl ? `<p><a target="_blank" href="${attr(v.businessCardUrl)}">View Business Card</a></p>` : ""}
+      </div>
+    `).join("") || "<p>No preferred professional resources are currently listed for this profile.</p>";
+}
+
+function loadBuyerDefaults(){
+  const a = DATA.assumptions || {};
+  if(a.MortgageInterestRate !== undefined) buyerRate.value = a.MortgageInterestRate;
+  else if(a.PlanningInterestRate !== undefined) buyerRate.value = a.PlanningInterestRate;
+
+  if(a.BuyerDownPaymentPercent !== undefined) buyerDownPct.value = a.BuyerDownPaymentPercent;
+  if(a.PropertyTaxAnnualPercent !== undefined) buyerTax.value = a.PropertyTaxAnnualPercent;
+  if(a.HomeInsuranceAnnualPercent !== undefined) buyerInsurance.value = a.HomeInsuranceAnnualPercent;
+  if(a.LoanTermYears !== undefined) buyerYears.value = a.LoanTermYears;
+}
+
+function calculateBuyer(){
+  const input = {
+    purchasePrice:buyerPrice.value,
+    downPaymentPercent:buyerDownPct.value,
+    interestRate:buyerRate.value,
+    loanTermYears:buyerYears.value,
+    propertyTaxAnnualPercent:buyerTax.value,
+    homeInsuranceAnnualPercent:buyerInsurance.value,
+    monthlyHoa:buyerHoa.value
+  };
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      buyerResult.innerHTML =
+        `<div class="metric">${money(r.estimatedTotalMonthlyPayment)}/mo</div>` +
+        `<p>Principal & Interest: ${money(r.estimatedPrincipalAndInterest)}</p>` +
+        `<p>Estimated Taxes: ${money(r.estimatedMonthlyTaxes)}</p>` +
+        `<p>Estimated Insurance: ${money(r.estimatedMonthlyInsurance)}</p>` +
+        `<p>HOA / Other: ${money((r.monthlyHoa || 0) + (r.monthlyOther || 0))}</p>`;
+
+      portalAction("CALCULATOR_USED", "BUYER_AFFORDABILITY");
+    })
+    .withFailureHandler(showError)
+    .BNP_calculateBuyerAffordability(input);
+}
+
+function calculateSeller(){
+  google.script.run
+    .withSuccessHandler(function(r){
+      sellerResult.innerHTML =
+        `<div class="metric">${money(r.estimatedLow)} – ${money(r.estimatedHigh)}</div>` +
+        `<p>${esc(r.nextStep || "")}</p>`;
+      portalAction("CALCULATOR_USED", "SELLER_VALUE_RANGE");
+    })
+    .withFailureHandler(showError)
+    .BNP_calculateSellerValueRange({
+      preliminaryEstimate:sellerEstimate.value
+    });
+}
+
+function calculateRent(){
+  const rent = Number(rentMonthly.value || 0);
+  const years = Number(rentYears.value || 0);
+  const inc = Number((DATA.assumptions || {}).RentAnnualIncreasePercent || 0) / 100;
+
+  let total = 0;
+  let annual = rent * 12;
+
+  for(let y=0;y<years;y++){
+    total += annual;
+    annual *= (1 + inc);
+  }
+
+  rentResult.innerHTML = `<div class="metric">${money(total)}</div><p>Estimated cumulative rent over ${years} year(s).</p>`;
+  portalAction("CALCULATOR_USED", "RENTER_RENT_COST");
+}
+
+function loadAcademyState(){
+  google.script.run
+    .withSuccessHandler(renderAcademyState)
+    .withFailureHandler(function(){})
+    .RAP_getRecruitAcademyState(TOKEN);
+}
+
+function renderAcademyState(state){
+  if(!state || !state.success) return;
+
+  academyInstructions.textContent = state.instructions || "";
+  academyDisclosure.textContent = state.disclosure || "";
+
+  if(state.approved && state.academyUrl){
+    academyActions.innerHTML =
+      `<a class="btn gold" target="_blank" href="${attr(state.academyUrl)}">Open Agent Academy</a>`;
+    return;
+  }
+
+  if(state.pending){
+    academyActions.innerHTML =
+      `<button class="btn" disabled>Access Request Under Review</button>`;
+    return;
+  }
+
+  academyActions.innerHTML =
+    `<button class="btn gold" onclick="requestAcademyAccess()">Request Academy Access</button>`;
+}
+
+function requestAcademyAccess(){
+  google.script.run
+    .withSuccessHandler(renderAcademyState)
+    .withFailureHandler(showError)
+    .RAP_requestAcademyAccess(TOKEN);
+}
+
+function portalAction(type, value=""){
+  google.script.run
+    .withFailureHandler(function(){})
+    .CIP_logPortalActivity(TOKEN, type, value, "PORTAL", {});
+}
+
+function vendorClick(id){
+  portalAction("VENDOR_CLICK", id);
+}
+
+function showError(err){
+  const box = document.getElementById("errorCard");
+  box.classList.remove("hidden");
+  box.textContent = typeof err === "string" ? err : (err && err.message ? err.message : "Unable to complete this request.");
+}
+
+function money(v){
+  return Number(v || 0).toLocaleString("en-US",{style:"currency",currency:"USD"});
+}
+
+function esc(v){
+  return String(v || "").replace(/[&<>"']/g,m=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+  }[m]));
+}
+
+function attr(v){ return esc(v); }
+function js(v){ return String(v || "").replace(/['\\]/g,""); }
+</script>
+</body>
+</html>

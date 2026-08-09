@@ -1,17 +1,1 @@
-{
-  "scriptId": "1V2kqK90MMBD48xoCdwGUK1-v8jKC33wEszGAgv38YCr--AbB7ucOdrrW",
-  "rootDir": "src",
-  "parentId": "1wmaH2KVOek9brDNFaKHF3USyYJ7Ma3UQa3xvZvwMcUw",
-  "scriptExtensions": [
-    ".js",
-    ".gs"
-  ],
-  "htmlExtensions": [
-    ".html"
-  ],
-  "jsonExtensions": [
-    ".json"
-  ],
-  "filePushOrder": [],
-  "skipSubdirectories": false
-}
+﻿{"scriptId":"1V2kqK90MMBD48xoCdwGUK1-v8jKC33wEszGAgv38YCr--AbB7ucOdrrW","rootDir":"."}
