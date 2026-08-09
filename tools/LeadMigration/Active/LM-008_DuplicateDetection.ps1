@@ -1,71 +1,122 @@
 <#
+==========================================================
 MelroseOS Enterprise
-Module : LM-008_DuplicateDetection
+Module : LM-008
+Name   : Duplicate Detection
+Version: 1.0.1
 Release: MOS5-016
+==========================================================
 #>
-$ErrorActionPreference='Stop'
-$Root='D:\MelroseOS\GitHub\MelroseOS'
-$Common=Join-Path $Root 'CoreModules\LM-000_Common.ps1'
-if(!(Test-Path $Common)){Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red;exit 1}
+
+$ErrorActionPreference = 'Stop'
+
+$Root   = 'D:\MelroseOS\GitHub\MelroseOS'
+$Common = Join-Path $Root 'CoreModules\LM-000_Common.ps1'
+
+if (-not (Test-Path -LiteralPath $Common)) {
+    Write-Host '[FAIL] LM-000_Common.ps1 not found.' -ForegroundColor Red
+    exit 1
+}
+
 . $Common
 
-$Reports=Join-Path (Get-MOSLeadMigrationRoot) 'Reports'
-$InputPath=Join-Path $Reports 'NormalizedLeads.json'
-$Output=Join-Path $Reports 'DuplicateDetection.json'
+$LMRoot     = Get-MOSLeadMigrationRoot
+$Reports    = Join-Path $LMRoot 'Reports'
+$InputPath  = Join-Path $Reports 'NormalizedLeads.json'
+$OutputPath = Join-Path $Reports 'DuplicateDetection.json'
 
 function Get-MOSDuplicateKey {
- param($Lead)
- if($Lead.Fingerprint){return [string]$Lead.Fingerprint}
- $email=([string]$Lead.Email).Trim().ToLowerInvariant()
- $phone=(([string]$Lead.Phone)-replace'\D','')
- "$email|$phone|$(([string]$Lead.PropertyAddress).Trim().ToLowerInvariant())"
+    param($Lead)
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$Lead.Fingerprint)) {
+        return [string]$Lead.Fingerprint
+    }
+
+    $Email   = ([string]$Lead.Email).Trim().ToLowerInvariant()
+    $Phone   = ([string]$Lead.Phone) -replace '\D',''
+    $Address = ([string]$Lead.PropertyAddress).Trim().ToLowerInvariant()
+
+    return "$Email|$Phone|$Address"
 }
 
-function Invoke-MOSDuplicateDetection{
- Write-MOSHeader 'LM-008 Duplicate Detection'
- if(!(Test-Path $InputPath)){Write-MOSError 'NormalizedLeads.json not found.';exit 1}
+function Invoke-MOSDuplicateDetection {
 
- $d=Get-Content $InputPath -Raw|ConvertFrom-Json
- $seen=@{}
- $rows=@()
+    Write-MOSHeader 'LM-008 Duplicate Detection'
 
- foreach($lead in @($d.leads)){
-  $key=Get-MOSDuplicateKey $lead
-  $dup=$false;$first=''
+    Test-MOSFolder $Reports | Out-Null
 
-  if($seen.ContainsKey($key)){
-   $dup=$true
-   $first=$seen[$key]
-  }else{
-   $seen[$key]=[string]$lead.MessageId
-  }
+    if (-not (Test-Path -LiteralPath $InputPath)) {
+        Write-MOSError "NormalizedLeads.json not found: $InputPath"
+        exit 1
+    }
 
-  $rows+=[pscustomobject]@{
-   MessageId=[string]$lead.MessageId
-   ThreadId=[string]$lead.ThreadId
-   Fingerprint=[string]$lead.Fingerprint
-   Email=[string]$lead.Email
-   Phone=[string]$lead.Phone
-   PropertyAddress=[string]$lead.PropertyAddress
-   LeadType=[string]$lead.LeadType
-   IsDuplicate=$dup
-   DuplicateOf=$first
-   RequiresBrokerReview=[bool]($dup -or $lead.RequiresBrokerReview)
-  }
- }
+    $Data = Get-Content -LiteralPath $InputPath -Raw | ConvertFrom-Json
 
- [ordered]@{
-  release='MOS5-016';module='LM-008';generatedAt=(Get-Date).ToString('o')
-  recordCount=$rows.Count
-  duplicateCount=@($rows|Where-Object{$_.IsDuplicate}).Count
-  records=$rows
-  previewOnly=$true
-  crmWritesEnabled=$false
-  outboundEnabled=$false
-  nextModule='LM-009_MergeEngine'
- }|ConvertTo-Json -Depth 30|Set-Content $Output -Encoding UTF8
+    $Seen = @{}
+    $Rows = @()
 
- Write-MOSSuccess 'LM-008 Duplicate Detection Ready'
+    foreach ($Lead in @($Data.leads)) {
+
+        $Key = Get-MOSDuplicateKey $Lead
+
+        $IsDuplicate = $false
+        $DuplicateOf = ''
+
+        if ($Seen.ContainsKey($Key)) {
+            $IsDuplicate = $true
+            $DuplicateOf = [string]$Seen[$Key]
+        }
+        else {
+            $Seen[$Key] = [string]$Lead.MessageId
+        }
+
+        $Rows += [pscustomobject]@{
+            MessageId            = [string]$Lead.MessageId
+            ThreadId             = [string]$Lead.ThreadId
+            Fingerprint          = [string]$Lead.Fingerprint
+            Email                = [string]$Lead.Email
+            Phone                = [string]$Lead.Phone
+            PropertyAddress      = [string]$Lead.PropertyAddress
+            LeadType             = [string]$Lead.LeadType
+            IsDuplicate          = $IsDuplicate
+            DuplicateOf          = $DuplicateOf
+            RequiresBrokerReview = [bool]($IsDuplicate -or $Lead.RequiresBrokerReview)
+        }
+    }
+
+    $Report = [ordered]@{
+        release            = 'MOS5-016'
+        module             = 'LM-008'
+        generatedAt        = (Get-Date).ToString('o')
+        recordCount        = $Rows.Count
+        duplicateCount     = @($Rows | Where-Object { $_.IsDuplicate }).Count
+        records            = $Rows
+        previewOnly        = $true
+        crmWritesEnabled   = $false
+        outboundEnabled    = $false
+        safetyLock         = 'ENABLED'
+        nextModule         = 'LM-009_MergeEngine'
+    }
+
+    $Report |
+        ConvertTo-Json -Depth 30 |
+        Set-Content -LiteralPath $OutputPath -Encoding UTF8
+
+    if (-not (Test-Path -LiteralPath $OutputPath)) {
+        Write-MOSError "Duplicate detection report was not created: $OutputPath"
+        exit 1
+    }
+
+    if ((Get-Item -LiteralPath $OutputPath).Length -le 0) {
+        Write-MOSError "Duplicate detection report is empty: $OutputPath"
+        exit 1
+    }
+
+    Write-Host "Output:"
+    Write-Host $OutputPath
+    Write-Host ""
+    Write-MOSSuccess 'LM-008 Duplicate Detection Ready'
 }
+
 Invoke-MOSDuplicateDetection
 exit 0
