@@ -1,7 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-
-title MelroseOS Lead Migration Pipeline v2
+title MelroseOS Lead Migration Pipeline
 
 set "ROOT=D:\MelroseOS\GitHub\MelroseOS"
 set "ACTIVE=%ROOT%\tools\LeadMigration\Active"
@@ -20,99 +19,35 @@ echo %ACTIVE%
 echo.
 
 if not exist "%ACTIVE%" (
-    echo [FAIL] Active module folder not found:
-    echo %ACTIVE%
-    pause
-    exit /b 1
+  echo [FAIL] Active folder not found.
+  pause
+  exit /b 1
 )
 
-call :RUN "LM-001_EnterpriseCore.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-002_GmailDiscovery.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-003_MessageInventory.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-004_LeadExtraction.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-005_LeadParser.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-006_EntityRecognition.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-007_Normalization.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-008_DuplicateDetection.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-009_MergeEngine.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-010_CRMWriter.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-011_CRMValidator.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-012_AttachmentDiscovery.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-013_AttachmentProcessor.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-014_LabelManager.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-015_HistoryBuilder.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-016_ConversationMerger.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-017_TimelineBuilder.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-018_AgentResolver.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-019_BrokerReview.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-020_ComplianceScanner.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-021_ExceptionHandler.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-022_DataQuality.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-023_Importer.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-024_Exporter.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-025_Reporting.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-026_Diagnostics.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-027_Performance.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-028_Backup.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-029_Restore.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
-call :RUN "LM-030_ReleaseManager.ps1"
-if errorlevel 1 goto PIPELINE_FAIL
+for /L %%N in (1,1,30) do (
+  set "NUM=00%%N"
+  set "NUM=!NUM:~-3!"
+  set "MODULE="
+  for %%F in ("%ACTIVE%\LM-!NUM!_*.ps1") do (
+    if exist "%%~fF" set "MODULE=%%~fF"
+  )
+
+  if not defined MODULE (
+    echo [FAIL] LM-!NUM! module not found.
+    goto PIPELINE_FAIL
+  )
+
+  echo.
+  echo ----------------------------------------------------------
+  echo RUNNING !MODULE!
+  echo ----------------------------------------------------------
+  powershell -NoProfile -ExecutionPolicy Bypass -File "!MODULE!"
+  if errorlevel 1 goto PIPELINE_FAIL
+
+  echo [PASS] LM-!NUM!
+)
 
 goto PIPELINE_PASS
-
-:RUN
-echo.
-echo ----------------------------------------------------------
-echo RUNNING %~1
-echo ----------------------------------------------------------
-echo.
-
-if not exist "%ACTIVE%\%~1" (
-    echo [FAIL] Missing module:
-    echo %ACTIVE%\%~1
-    exit /b 1
-)
-
-powershell -NoProfile -ExecutionPolicy Bypass -File "%ACTIVE%\%~1"
-set "RC=%ERRORLEVEL%"
-
-if not "%RC%"=="0" (
-    echo.
-    echo [FAIL] %~1 returned exit code %RC%.
-    exit /b %RC%
-)
-
-echo [PASS] %~1
-exit /b 0
 
 :PIPELINE_PASS
 echo.
