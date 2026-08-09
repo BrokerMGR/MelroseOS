@@ -1,0 +1,28 @@
+{
+  "release": "MOS5-021",
+  "version": "1.0.0",
+  "package": "3B",
+  "branding": {
+    "sourceLogo": "Uploaded MGR logo optimized for email",
+    "sourceBusinessCard": "Uploaded Ulysses Barnes broker card optimized for email",
+    "inlineMode": "CID",
+    "driveSeedFolder": "MelroseOS Recruiting Assets",
+    "logoEmailSize": {
+      "width": 700,
+      "height": 700
+    },
+    "businessCardEmailSize": {
+      "width": 900,
+      "height": 450
+    }
+  },
+  "testMailer": {
+    "defaultRecipient": "melrosegroupbroker@gmail.com",
+    "allowedRecipients": [
+      "melrosegroupbroker@gmail.com",
+      "melrosegrouprealty@gmail.com"
+    ],
+    "requiresEffectiveUser": "melrosegrouprealty@gmail.com",
+    "sandboxOnly": true
+  }
+}
