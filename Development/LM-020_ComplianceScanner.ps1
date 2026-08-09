@@ -1,7 +1,7 @@
 <#
 ==========================================================
 MelroseOS Enterprise
-Module : LM-014_LabelManager
+Module : LM-020_ComplianceScanner
 Release: MOS5-016
 Status : Development
 ==========================================================
