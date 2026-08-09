@@ -43,11 +43,6 @@ foreach($Path in $RequiredPaths){
     if($Exists){Write-UPDPass $Path}else{Write-UPDFail $Path}
 }
 
-$ExpectedScripts=@('UPD-000_Common.ps1')
-for($i=1;$i -le 20;$i++){
-    $ExpectedScripts += ('UPD-{0:D3}_' -f $i)
-}
-
 $CorePath=Join-Path $Global:UPD_MANAGER 'Core\UPD-000_Common.ps1'
 $CoreOk=(Test-Path -LiteralPath $CorePath) -and ((Get-Item -LiteralPath $CorePath).Length -gt 500)
 if(-not $CoreOk){$Failed++}
