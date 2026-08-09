@@ -3,8 +3,8 @@ MelroseOS Enterprise
 Package Manager Certification
 Module : PKGCERT-011_Repository
 Release: MOS5-018
-Version: 1.0.2
-Purpose: Certify repository state while correctly excluding generated/runtime PackageManager data.
+Version: 1.0.3
+Purpose: Certify repository source state while excluding known runtime/generated PackageManager state.
 #>
 
 $ErrorActionPreference='Stop'
@@ -32,16 +32,16 @@ function Invoke-GitQuiet {
     $psi.RedirectStandardError=$true
     $psi.CreateNoWindow=$true
 
-    $process=New-Object System.Diagnostics.Process
-    $process.StartInfo=$psi
-    $null=$process.Start()
+    $p=New-Object System.Diagnostics.Process
+    $p.StartInfo=$psi
+    $null=$p.Start()
 
-    $stdout=$process.StandardOutput.ReadToEnd()
-    $stderr=$process.StandardError.ReadToEnd()
-    $process.WaitForExit()
+    $stdout=$p.StandardOutput.ReadToEnd()
+    $stderr=$p.StandardError.ReadToEnd()
+    $p.WaitForExit()
 
     [pscustomobject]@{
-        ExitCode=$process.ExitCode
+        ExitCode=$p.ExitCode
         StdOut=$stdout.Trim()
         StdErr=$stderr.Trim()
     }
@@ -50,7 +50,7 @@ function Invoke-GitQuiet {
 $BranchResult=Invoke-GitQuiet @('branch','--show-current')
 $HeadResult=Invoke-GitQuiet @('rev-parse','HEAD')
 $OriginResult=Invoke-GitQuiet @('rev-parse','origin/main')
-$StatusResult=Invoke-GitQuiet @('status','--porcelain')
+$StatusResult=Invoke-GitQuiet @('status','--porcelain=v1')
 
 $Branch=$BranchResult.StdOut
 $Head=$HeadResult.StdOut
@@ -64,41 +64,40 @@ if(-not [string]::IsNullOrWhiteSpace($StatusResult.StdOut)){
     )
 }
 
-# These paths are runtime/generated state. Certification execution itself may
-# legitimately update them, so they must not make the source tree fail.
-$GeneratedPrefixes=@(
-    'PackageManager/Reports/',
-    'PackageManager/Logs/',
-    'PackageManager/Snapshots/',
-    'PackageManager/Temp/',
-    'PackageManager/Packages/Cache/',
-    'PackageManager/Packages/Staging/',
-    'PackageManager/Packages/Rollback/',
-    'PackageManager/Registry/',
-    'PackageManager/Certification/Reports/',
-    'PackageManager/Certification/Logs/',
-    'PackageManager/Certification/Temp/'
+# Match the path portion of git porcelain lines directly.
+# These are runtime/generated artifacts and must never fail source certification.
+$RuntimeRegexes=@(
+    '^..\s+PackageManager/Registry/',
+    '^..\s+PackageManager/Reports/',
+    '^..\s+PackageManager/Logs/',
+    '^..\s+PackageManager/Snapshots/',
+    '^..\s+PackageManager/Temp/',
+    '^..\s+PackageManager/Packages/Cache/',
+    '^..\s+PackageManager/Packages/Staging/',
+    '^..\s+PackageManager/Packages/Rollback/',
+    '^..\s+PackageManager/Certification/Reports/',
+    '^..\s+PackageManager/Certification/Logs/',
+    '^..\s+PackageManager/Certification/Temp/'
 )
 
 $SourceChanges=@()
-$GeneratedChanges=@()
+$RuntimeChanges=@()
 
 foreach($Line in $AllChanges){
-    $Path=if($Line.Length -gt 3){$Line.Substring(3).Trim()}else{$Line}
-    $Normalized=$Path.Replace('\','/')
-    $IsGenerated=$false
+    $Normalized=$Line.Replace('\','/')
+    $IsRuntime=$false
 
-    foreach($Prefix in $GeneratedPrefixes){
-        if($Normalized.StartsWith($Prefix,[System.StringComparison]::OrdinalIgnoreCase)){
-            $IsGenerated=$true
+    foreach($Pattern in $RuntimeRegexes){
+        if($Normalized -match $Pattern){
+            $IsRuntime=$true
             break
         }
     }
 
-    if($IsGenerated){
-        $GeneratedChanges+=$Line
+    if($IsRuntime){
+        $RuntimeChanges += $Line
     }else{
-        $SourceChanges+=$Line
+        $SourceChanges += $Line
     }
 }
 
@@ -134,10 +133,10 @@ foreach($Check in $Checks){
     }
 }
 
-if($GeneratedChanges.Count -gt 0){
-    Write-PKGCertInfo "Ignoring $($GeneratedChanges.Count) expected generated/runtime change(s)."
-    foreach($Generated in $GeneratedChanges){
-        Write-PKGCertInfo "Runtime: $Generated"
+if($RuntimeChanges.Count -gt 0){
+    Write-PKGCertInfo "Ignoring $($RuntimeChanges.Count) expected generated/runtime change(s)."
+    foreach($Change in $RuntimeChanges){
+        Write-PKGCertInfo "Runtime: $Change"
     }
 }
 
@@ -155,13 +154,13 @@ foreach($Warning in $Warnings){
 $Report=[ordered]@{
     release='MOS5-018'
     certification='PKGCERT-011'
-    version='1.0.2'
+    version='1.0.3'
     generatedAt=(Get-Date).ToString('o')
     branch=$Branch
     localHead=$Head
     remoteHead=$Origin
     sourceChanges=$SourceChanges
-    ignoredGeneratedChanges=$GeneratedChanges
+    ignoredRuntimeChanges=$RuntimeChanges
     gitWarnings=$Warnings
     failedCount=$Failed
     passed=($Failed -eq 0)
