@@ -62,14 +62,14 @@ function MGR_RECRUIT_sendFirstFiveTestsToBroker() {
   messages.forEach(function(message, i) {
     if (
       typeof MGRCORE === 'undefined' ||
-      typeof MGRCORE.MGR_EMAIL_sendCompliant !== 'function'
+      typeof MGRCORE.MGR_CORE_sendCompliantEmail !== 'function'
     ) {
       throw new Error(
-        'MGRCORE library is required for compliant email delivery.'
+        'MGRCORE public email bridge is required for compliant email delivery.'
       );
     }
 
-    MGRCORE.MGRCORE.MGRCORE.MGR_EMAIL_sendCompliant({
+    MGRCORE.MGRCORE.MGRCORE.MGR_CORE_sendCompliantEmail({
       to:recipient,
       subject:'[RECRUIT TEST ' + (i+1) + '/5] ' + message.subject,
       htmlBody:message.html,
