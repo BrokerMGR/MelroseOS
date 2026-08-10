@@ -33,7 +33,7 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.5.2';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.6.1';
 
 const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
   '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
@@ -495,6 +495,10 @@ const MGR_EMAIL_RESPONSIVE_STYLE_V2 =
   '</style>';
 
 function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
+  contentHtml = MGR_EMAIL_removeDuplicateGlobalCtas_(
+    contentHtml,
+    urls
+  );
   const postal = MGR_EMAIL_getSetting_(
     MGR_EMAIL_CFG.PROPERTY_POSTAL_ADDRESS,
     ''
@@ -1032,6 +1036,131 @@ function MGR_EMAIL_typographyDiagnostics() {
     timestamp: new Date().toISOString()
   };
 }
+
+/**
+ * Global CTA de-duplication rule.
+ *
+ * Consultation and Academy destinations may appear only once in the
+ * rendered email. The global colored CTA buttons are authoritative.
+ */
+function MGR_EMAIL_removeDuplicateGlobalCtas_(html, urls) {
+  let value = String(html || '');
+
+  const targets = [
+    String((urls && urls.consultation) || '').trim(),
+    String((urls && urls.academy) || '').trim()
+  ].filter(function(url) {
+    return !!url;
+  });
+
+  targets.forEach(function(url) {
+    const escaped = MGR_EMAIL_escapeRegex_(url);
+
+    value = value.replace(
+      new RegExp(
+        '<a\\b[^>]*href=["\\\']' +
+        escaped +
+        '["\\\'][^>]*>[\\s\\S]*?<\\/a>',
+        'gi'
+      ),
+      ''
+    );
+
+    value = value.replace(
+      new RegExp(escaped, 'gi'),
+      ''
+    );
+  });
+
+  value = value
+    .replace(/<p\b[^>]*>\s*<\/p>/gi, '')
+    .replace(/<div\b[^>]*>\s*<\/div>/gi, '')
+    .replace(/<br\s*\/?>\s*<br\s*\/?>/gi, '<br>')
+    .trim();
+
+  return value;
+}
+
+function MGR_EMAIL_escapeRegex_(value) {
+  return String(value || '').replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+}
+
+function MGR_EMAIL_singleCtaDiagnostics() {
+  const urls = {
+    consultation:
+      'https://melrosegrouprealty.com/book-now',
+    academy:
+      'https://melrosegrouprealty.com/agent-academy/'
+  };
+
+  const sample =
+    '<p><a href="' +
+    urls.consultation +
+    '">Book Now</a></p>' +
+    '<p><a href="' +
+    urls.academy +
+    '">Academy</a></p>' +
+    '<p>Keep this body copy.</p>';
+
+  const cleaned =
+    MGR_EMAIL_removeDuplicateGlobalCtas_(
+      sample,
+      urls
+    );
+
+  const wrapped =
+    MGR_EMAIL_wrapCompliantHtml_(
+      sample,
+      {
+        consultation: urls.consultation,
+        academy: urls.academy,
+        website:
+          'https://melrosegrouprealty.com',
+        unsubscribe:
+          'https://example.com/unsubscribe'
+      },
+      {
+        subject: 'CTA Diagnostic'
+      }
+    );
+
+  const consultationCount =
+    (wrapped.match(
+      new RegExp(
+        MGR_EMAIL_escapeRegex_(
+          urls.consultation
+        ),
+        'g'
+      )
+    ) || []).length;
+
+  const academyCount =
+    (wrapped.match(
+      new RegExp(
+        MGR_EMAIL_escapeRegex_(
+          urls.academy
+        ),
+        'g'
+      )
+    ) || []).length;
+
+  return {
+    success:
+      cleaned.indexOf(urls.consultation) === -1 &&
+      cleaned.indexOf(urls.academy) === -1 &&
+      cleaned.indexOf('Keep this body copy.') !== -1 &&
+      consultationCount === 1 &&
+      academyCount === 1,
+    consultationCount: consultationCount,
+    academyCount: academyCount,
+    version: MGR_EMAIL_COMPLIANCE_VERSION,
+    timestamp: new Date().toISOString()
+  };
+}
+
 function MGR_EMAIL_getComplianceInlineImages_(existing) {
   const images = {};
 
