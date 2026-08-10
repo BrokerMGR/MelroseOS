@@ -78,6 +78,11 @@ const MGR_EMAIL_CFG = Object.freeze({
  * @return {Object}
  */
 function MGR_EMAIL_send(message) {
+  // SYSTEM-WIDE EMAIL QUOTA GOVERNOR
+  if (typeof MGR_EMAIL_assertQuota === 'function') {
+    MGR_EMAIL_assertQuota(message);
+  }
+
   MGR_EMAIL_assertObject_(message, 'message');
 
   const to = MGR_EMAIL_normalizeEmail_(message.to);
