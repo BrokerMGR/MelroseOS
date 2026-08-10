@@ -1,22 +1,18 @@
 /**
  * MelroseOS CRM
  * File: CRM-130_LiveLRECVerifier.gs
- * Version: 1.0.0
+ * Version: 1.1.0
  *
- * Live fail-closed verifier against the official LREC public Verify License Search.
- * Official source: https://portal.lrec.gov/public/search
+ * Live fail-closed verifier against official LREC public Verify License Search.
  *
- * Design:
- * - Fetches the public search form live.
- * - Dynamically discovers the form action + License Number input name.
- * - Preserves hidden form tokens and session cookie when submitting.
- * - Searches by recruit credential/license number.
- * - Parses status/company only when the response is sufficiently clear.
- * - Returns success=false if the portal changes or parsing is ambiguous.
+ * IMPORTANT BUSINESS RULE:
+ * - Clean search with NO matching license record = PENDING.
+ * - ANY matching license record = EXISTING AGENT route.
+ * - Portal/search/parsing failure = HOLD / NO SEND.
  */
 
 const MGR_LREC_LIVE = Object.freeze({
-  VERSION: '1.0.0',
+  VERSION: '1.1.0',
   SEARCH_URL: 'https://portal.lrec.gov/public/search',
   SOURCE: 'LREC_PUBLIC_PORTAL'
 });
@@ -32,6 +28,10 @@ function MGR_RECRUIT_LREC_lookup(recruit) {
 
   if (!licenseNumber) {
     return MGR_LREC_result_(false, {
+      transportError: false,
+      parseError: true,
+      recordFound: false,
+      noResults: false,
       licenseNumber: '',
       error: 'MISSING_LICENSE_NUMBER'
     });
@@ -55,6 +55,10 @@ function MGR_RECRUIT_LREC_lookup(recruit) {
 
     if (landingCode < 200 || landingCode >= 400 || !landingHtml) {
       return MGR_LREC_result_(false, {
+        transportError: true,
+        parseError: false,
+        recordFound: false,
+        noResults: false,
         licenseNumber: licenseNumber,
         error: 'LREC_SEARCH_PAGE_UNAVAILABLE_HTTP_' + landingCode
       });
@@ -64,6 +68,10 @@ function MGR_RECRUIT_LREC_lookup(recruit) {
 
     if (!form.success) {
       return MGR_LREC_result_(false, {
+        transportError: false,
+        parseError: true,
+        recordFound: false,
+        noResults: false,
         licenseNumber: licenseNumber,
         error: form.error || 'LREC_SEARCH_FORM_UNPARSEABLE'
       });
@@ -72,12 +80,13 @@ function MGR_RECRUIT_LREC_lookup(recruit) {
     const payload = Object.assign({}, form.hiddenFields);
     payload[form.licenseNumberField] = licenseNumber;
 
-    // Some portals use a submit button name/value. Preserve it when confidently found.
     if (form.submitName) {
       payload[form.submitName] = form.submitValue || 'Search';
     }
 
-    const cookie = MGR_LREC_cookieHeader_(landing.getAllHeaders());
+    const cookie = MGR_LREC_cookieHeader_(
+      landing.getAllHeaders()
+    );
 
     const options = {
       method: form.method || 'post',
@@ -99,29 +108,136 @@ function MGR_RECRUIT_LREC_lookup(recruit) {
       form.action || MGR_LREC_LIVE.SEARCH_URL
     );
 
-    const response = UrlFetchApp.fetch(resultUrl, options);
+    const response = UrlFetchApp.fetch(
+      resultUrl,
+      options
+    );
+
     const code = response.getResponseCode();
     const html = response.getContentText();
 
     if (code < 200 || code >= 400 || !html) {
       return MGR_LREC_result_(false, {
+        transportError: true,
+        parseError: false,
+        recordFound: false,
+        noResults: false,
         licenseNumber: licenseNumber,
         error: 'LREC_SEARCH_RESULT_UNAVAILABLE_HTTP_' + code
       });
     }
 
-    return MGR_LREC_parseResult_(html, licenseNumber);
+    return MGR_LREC_parseResult_(
+      html,
+      licenseNumber
+    );
   } catch (err) {
     return MGR_LREC_result_(false, {
+      transportError: true,
+      parseError: false,
+      recordFound: false,
+      noResults: false,
       licenseNumber: licenseNumber,
-      error: String(err && err.message ? err.message : err)
+      error: String(
+        err && err.message
+          ? err.message
+          : err
+      )
     });
   }
 }
 
+function MGR_LREC_parseResult_(html, licenseNumber) {
+  const text = MGR_LREC_htmlToText_(html);
+  const normalizedLicense =
+    String(licenseNumber)
+      .replace(/\s+/g, '');
+
+  const normalizedText =
+    text.replace(/\s+/g, '');
+
+  const found =
+    normalizedText.indexOf(
+      normalizedLicense
+    ) >= 0;
+
+  if (!found) {
+    // This is the intentional business-rule change:
+    // a clean completed LREC search with no matching record is PENDING.
+    return MGR_LREC_result_(true, {
+      transportError: false,
+      parseError: false,
+      recordFound: false,
+      noResults: true,
+      licenseNumber: licenseNumber,
+      licenseStatus: 'Pending',
+      companyName: '',
+      sponsoringBroker: '',
+      classification: 'PENDING_RECRUIT'
+    });
+  }
+
+  const status = MGR_LREC_extractLabelValue_(
+    text,
+    ['License Status', 'Status']
+  );
+
+  const company = MGR_LREC_extractLabelValue_(
+    text,
+    ['Company Name', 'Company', 'Brokerage']
+  );
+
+  const broker = MGR_LREC_extractLabelValue_(
+    text,
+    ['Sponsoring Broker', 'Broker']
+  );
+
+  // Any matching LREC license record means this person leaves the
+  // pending-agent workflow, even if status text changes.
+  return MGR_LREC_result_(true, {
+    transportError: false,
+    parseError: false,
+    recordFound: true,
+    noResults: false,
+    licenseNumber: licenseNumber,
+    licenseStatus:
+      MGR_LREC_normalizeStatus_(status) ||
+      String(status || 'License Record Found'),
+    companyName: company,
+    sponsoringBroker: broker,
+    classification:
+      'EXISTING_AGENT_PENDING_WORKFLOW'
+  });
+}
+
+function MGR_LREC_normalizeStatus_(value) {
+  const v = String(value || '')
+    .trim()
+    .toUpperCase();
+
+  if (/\bACTIVE\b/.test(v) &&
+      !/\bINACTIVE\b/.test(v)) {
+    return 'Active';
+  }
+
+  if (/\bINACTIVE\b/.test(v)) {
+    return 'Inactive';
+  }
+
+  if (/\bPENDING\b/.test(v)) {
+    return 'Pending';
+  }
+
+  return '';
+}
+
+/* ---------- Existing dynamic form helpers ---------- */
+
 function MGR_LREC_parseSearchForm_(html) {
   const forms = [];
-  const formRegex = /<form\b([^>]*)>([\s\S]*?)<\/form>/gi;
+  const formRegex =
+    /<form\b([^>]*)>([\s\S]*?)<\/form>/gi;
+
   let m;
 
   while ((m = formRegex.exec(html)) !== null) {
@@ -148,33 +264,49 @@ function MGR_LREC_parseSearchForm_(html) {
 
   const f = forms[0];
 
-  const action = MGR_LREC_attr_(f.attrs, 'action') || '';
+  const action =
+    MGR_LREC_attr_(f.attrs, 'action') || '';
+
   const method = (
-    MGR_LREC_attr_(f.attrs, 'method') || 'post'
+    MGR_LREC_attr_(f.attrs, 'method') ||
+    'post'
   ).toLowerCase();
 
   const hiddenFields = {};
-  const inputRegex = /<input\b([^>]*)>/gi;
-  let input;
+  const inputRegex =
+    /<input\b([^>]*)>/gi;
 
+  let input;
   let licenseNumberField = '';
   let submitName = '';
   let submitValue = '';
 
-  const labelFor = MGR_LREC_findLabelFor_(
-    f.body,
-    /license\s*number/i
-  );
+  const labelFor =
+    MGR_LREC_findLabelFor_(
+      f.body,
+      /license\s*number/i
+    );
 
-  while ((input = inputRegex.exec(f.body)) !== null) {
+  while (
+    (input = inputRegex.exec(f.body)) !==
+    null
+  ) {
     const attrs = input[1] || '';
+
     const type = (
-      MGR_LREC_attr_(attrs, 'type') || 'text'
+      MGR_LREC_attr_(attrs, 'type') ||
+      'text'
     ).toLowerCase();
 
-    const name = MGR_LREC_attr_(attrs, 'name') || '';
-    const id = MGR_LREC_attr_(attrs, 'id') || '';
-    const value = MGR_LREC_attr_(attrs, 'value') || '';
+    const name =
+      MGR_LREC_attr_(attrs, 'name') || '';
+
+    const id =
+      MGR_LREC_attr_(attrs, 'id') || '';
+
+    const value =
+      MGR_LREC_attr_(attrs, 'value') ||
+      '';
 
     if (type === 'hidden' && name) {
       hiddenFields[name] = value;
@@ -194,7 +326,8 @@ function MGR_LREC_parseSearchForm_(html) {
 
     if (
       !submitName &&
-      (type === 'submit' || type === 'button') &&
+      (type === 'submit' ||
+       type === 'button') &&
       name
     ) {
       submitName = name;
@@ -205,112 +338,69 @@ function MGR_LREC_parseSearchForm_(html) {
   if (!licenseNumberField) {
     return {
       success: false,
-      error: 'LICENSE_NUMBER_FIELD_NOT_FOUND'
+      error:
+        'LICENSE_NUMBER_FIELD_NOT_FOUND'
     };
   }
 
   return {
     success: true,
     action: action,
-    method: method === 'get' ? 'get' : 'post',
+    method:
+      method === 'get'
+        ? 'get'
+        : 'post',
     hiddenFields: hiddenFields,
-    licenseNumberField: licenseNumberField,
+    licenseNumberField:
+      licenseNumberField,
     submitName: submitName,
     submitValue: submitValue
   };
 }
 
-function MGR_LREC_parseResult_(html, licenseNumber) {
-  const text = MGR_LREC_htmlToText_(html);
-  const normalizedLicense = String(licenseNumber).replace(/\s+/g, '');
-
-  const found =
-    text.replace(/\s+/g, '').indexOf(normalizedLicense) >= 0;
-
-  if (!found) {
-    return MGR_LREC_result_(false, {
-      licenseNumber: licenseNumber,
-      error: 'LICENSE_NOT_FOUND_OR_RESULT_UNPARSEABLE'
-    });
-  }
-
-  const status =
-    MGR_LREC_extractLabelValue_(
-      text,
-      ['License Status', 'Status']
-    );
-
-  const company =
-    MGR_LREC_extractLabelValue_(
-      text,
-      ['Company Name', 'Company', 'Brokerage']
-    );
-
-  const broker =
-    MGR_LREC_extractLabelValue_(
-      text,
-      ['Sponsoring Broker', 'Broker']
-    );
-
-  if (!status) {
-    return MGR_LREC_result_(false, {
-      licenseNumber: licenseNumber,
-      error: 'LICENSE_STATUS_UNPARSEABLE'
-    });
-  }
-
-  // Normalize only recognized status words. Anything else fails closed.
-  const canonicalStatus = MGR_LREC_normalizeStatus_(status);
-
-  if (!canonicalStatus) {
-    return MGR_LREC_result_(false, {
-      licenseNumber: licenseNumber,
-      rawLicenseStatus: status,
-      error: 'LICENSE_STATUS_AMBIGUOUS'
-    });
-  }
-
-  return MGR_LREC_result_(true, {
-    licenseNumber: licenseNumber,
-    licenseStatus: canonicalStatus,
-    companyName: company,
-    sponsoringBroker: broker
-  });
-}
-
-function MGR_LREC_normalizeStatus_(value) {
-  const v = String(value || '').trim().toUpperCase();
-
-  if (/\bPENDING\b/.test(v)) return 'Pending';
-  if (/\bACTIVE\b/.test(v) && !/\bINACTIVE\b/.test(v)) return 'Active';
-  if (/\bINACTIVE\b/.test(v)) return 'Inactive';
-
-  return '';
-}
-
-function MGR_LREC_extractLabelValue_(text, labels) {
+function MGR_LREC_extractLabelValue_(
+  text,
+  labels
+) {
   const lines = String(text || '')
     .split(/\n+/)
-    .map(function(x) { return x.trim(); })
+    .map(function(x) {
+      return x.trim();
+    })
     .filter(Boolean);
 
-  for (let i = 0; i < lines.length; i++) {
+  for (
+    let i = 0;
+    i < lines.length;
+    i++
+  ) {
     const current = lines[i];
 
-    for (let j = 0; j < labels.length; j++) {
+    for (
+      let j = 0;
+      j < labels.length;
+      j++
+    ) {
       const label = labels[j];
 
       if (
-        current.toLowerCase() === label.toLowerCase() &&
+        current.toLowerCase() ===
+          label.toLowerCase() &&
         i + 1 < lines.length
       ) {
         return lines[i + 1].trim();
       }
 
-      const prefix = label.toLowerCase() + ':';
+      const prefix =
+        label.toLowerCase() + ':';
 
-      if (current.toLowerCase().indexOf(prefix) === 0) {
-        return current.substring(prefix.length).trim();
+      if (
+        current.toLowerCase()
+          .indexOf(prefix) === 0
+      ) {
+        return current
+          .substring(prefix.length)
+          .trim();
       }
     }
   }
@@ -320,10 +410,19 @@ function MGR_LREC_extractLabelValue_(text, labels) {
 
 function MGR_LREC_htmlToText_(html) {
   return String(html || '')
-    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(
+      /<script\b[\s\S]*?<\/script>/gi,
+      ' '
+    )
+    .replace(
+      /<style\b[\s\S]*?<\/style>/gi,
+      ' '
+    )
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(div|p|li|tr|td|th|section|article|h[1-6])>/gi, '\n')
+    .replace(
+      /<\/(div|p|li|tr|td|th|section|article|h[1-6])>/gi,
+      '\n'
+    )
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -336,16 +435,31 @@ function MGR_LREC_htmlToText_(html) {
     .trim();
 }
 
-function MGR_LREC_findLabelFor_(html, pattern) {
-  const labelRegex = /<label\b([^>]*)>([\s\S]*?)<\/label>/gi;
+function MGR_LREC_findLabelFor_(
+  html,
+  pattern
+) {
+  const labelRegex =
+    /<label\b([^>]*)>([\s\S]*?)<\/label>/gi;
+
   let m;
 
-  while ((m = labelRegex.exec(html)) !== null) {
+  while (
+    (m = labelRegex.exec(html)) !== null
+  ) {
     const attrs = m[1] || '';
-    const text = MGR_LREC_htmlToText_(m[2] || '');
+    const text =
+      MGR_LREC_htmlToText_(
+        m[2] || ''
+      );
 
     if (pattern.test(text)) {
-      return MGR_LREC_attr_(attrs, 'for') || '';
+      return (
+        MGR_LREC_attr_(
+          attrs,
+          'for'
+        ) || ''
+      );
     }
   }
 
@@ -354,24 +468,33 @@ function MGR_LREC_findLabelFor_(html, pattern) {
 
 function MGR_LREC_attr_(attrs, name) {
   const re = new RegExp(
-    '\\b' + name + '\\s*=\\s*(["\'])(.*?)\\1',
+    '\\b' +
+      name +
+      '\\s*=\\s*(["\'])(.*?)\\1',
     'i'
   );
 
-  const m = re.exec(String(attrs || ''));
+  const m =
+    re.exec(String(attrs || ''));
 
   if (m) return m[2];
 
-  const bare = new RegExp(
-    '\\b' + name + '\\s*=\\s*([^\\s>]+)',
-    'i'
-  ).exec(String(attrs || ''));
+  const bare =
+    new RegExp(
+      '\\b' +
+        name +
+        '\\s*=\\s*([^\\s>]+)',
+      'i'
+    ).exec(
+      String(attrs || '')
+    );
 
   return bare ? bare[1] : '';
 }
 
 function MGR_LREC_cookieHeader_(headers) {
   const h = headers || {};
+
   let raw =
     h['Set-Cookie'] ||
     h['set-cookie'] ||
@@ -386,77 +509,106 @@ function MGR_LREC_cookieHeader_(headers) {
   return String(raw)
     .split(/,(?=[^;,]+?=)/)
     .map(function(cookie) {
-      return cookie.split(';')[0].trim();
+      return cookie
+        .split(';')[0]
+        .trim();
     })
     .filter(Boolean)
     .join('; ');
 }
 
-function MGR_LREC_resolveUrl_(base, action) {
-  const a = String(action || '').trim();
+function MGR_LREC_resolveUrl_(
+  base,
+  action
+) {
+  const a =
+    String(action || '').trim();
 
   if (!a) return base;
-  if (/^https?:\/\//i.test(a)) return a;
 
-  const m = /^(https?:\/\/[^\/]+)/i.exec(base);
-  const origin = m ? m[1] : '';
+  if (/^https?:\/\//i.test(a)) {
+    return a;
+  }
+
+  const m =
+    /^(https?:\/\/[^\/]+)/i
+      .exec(base);
+
+  const origin =
+    m ? m[1] : '';
 
   if (a.charAt(0) === '/') {
     return origin + a;
   }
 
-  return base.replace(/\/[^\/]*$/, '/') + a;
+  return (
+    base.replace(
+      /\/[^\/]*$/,
+      '/'
+    ) + a
+  );
 }
 
-function MGR_LREC_result_(success, fields) {
+function MGR_LREC_result_(
+  success,
+  fields
+) {
   return Object.assign(
     {
-      success: success === true,
-      checkedAt: new Date().toISOString(),
-      source: MGR_LREC_LIVE.SOURCE,
-      verifierVersion: MGR_LREC_LIVE.VERSION
+      success:
+        success === true,
+      checkedAt:
+        new Date().toISOString(),
+      source:
+        MGR_LREC_LIVE.SOURCE,
+      verifierVersion:
+        MGR_LREC_LIVE.VERSION
     },
     fields || {}
   );
 }
 
-/**
- * Connectivity-only diagnostic.
- * This does not certify a recruit's status; it confirms that the official
- * public LREC Verify License Search can be fetched and parsed enough to locate
- * the License Number search field.
- */
 function RUN_LREC_LIVE_VERIFIER_DIAGNOSTICS() {
   const result = {
     success: false,
-    source: MGR_LREC_LIVE.SEARCH_URL,
+    source:
+      MGR_LREC_LIVE.SEARCH_URL,
     httpCode: 0,
     searchFormParsed: false,
     licenseNumberFieldFound: false,
+    businessRule:
+      'NO_RESULTS=PENDING; ANY_RECORD=EXISTING_AGENT; ERROR=HOLD',
     error: '',
-    timestamp: new Date().toISOString()
+    timestamp:
+      new Date().toISOString()
   };
 
   try {
-    const response = UrlFetchApp.fetch(
-      MGR_LREC_LIVE.SEARCH_URL,
-      {
-        method: 'get',
-        muteHttpExceptions: true,
-        followRedirects: true,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 MelroseOS-LREC-Verifier'
+    const response =
+      UrlFetchApp.fetch(
+        MGR_LREC_LIVE.SEARCH_URL,
+        {
+          method: 'get',
+          muteHttpExceptions: true,
+          followRedirects: true,
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 MelroseOS-LREC-Verifier'
+          }
         }
-      }
-    );
+      );
 
-    result.httpCode = response.getResponseCode();
+    result.httpCode =
+      response.getResponseCode();
 
-    const form = MGR_LREC_parseSearchForm_(
-      response.getContentText()
-    );
+    const form =
+      MGR_LREC_parseSearchForm_(
+        response.getContentText()
+      );
 
-    result.searchFormParsed = form.success === true;
+    result.searchFormParsed =
+      form.success === true;
+
     result.licenseNumberFieldFound =
       !!form.licenseNumberField;
 
@@ -472,14 +624,21 @@ function RUN_LREC_LIVE_VERIFIER_DIAGNOSTICS() {
         'LREC_LIVE_DIAGNOSTIC_FAILED';
     }
   } catch (err) {
-    result.error = String(
-      err && err.message ? err.message : err
-    );
+    result.error =
+      String(
+        err && err.message
+          ? err.message
+          : err
+      );
   }
 
   console.log(
     'RUN_LREC_LIVE_VERIFIER_DIAGNOSTICS\n' +
-    JSON.stringify(result, null, 2)
+    JSON.stringify(
+      result,
+      null,
+      2
+    )
   );
 
   return result;
