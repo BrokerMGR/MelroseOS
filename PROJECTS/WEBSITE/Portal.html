@@ -52,6 +52,53 @@
       .wrap{padding:14px}
     }
   </style>
+<style id="mgr-responsive-system-v3">
+:root{
+  --mgr-max:1200px;
+  --mgr-gutter:clamp(16px,3vw,32px);
+}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{width:100%;max-width:100%;overflow-x:hidden;}
+body{margin:0;}
+img,svg,video,canvas,iframe{max-width:100%;height:auto;}
+table{max-width:100%;}
+input,select,textarea,button{max-width:100%;font:inherit;}
+button,a{-webkit-tap-highlight-color:transparent;}
+.mgr-container,.container,.wrapper,.portal-shell,.portal-container{
+  width:min(100% - (2 * var(--mgr-gutter)),var(--mgr-max));
+  margin-left:auto;
+  margin-right:auto;
+}
+.mgr-grid{
+  display:grid;
+  gap:clamp(14px,2vw,24px);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+}
+.mgr-flex-wrap{display:flex;flex-wrap:wrap;gap:clamp(10px,2vw,20px);}
+@media (max-width:1024px){.mgr-hide-tablet{display:none!important;}}
+@media (max-width:768px){
+  .mgr-stack-mobile,.mgr-stack-mobile>*{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+  table.mgr-responsive-table{
+    display:block;
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .mgr-mobile-center{text-align:center!important;}
+}
+@media (max-width:480px){
+  :root{--mgr-gutter:14px;}
+  body{font-size:15px;}
+  h1{font-size:clamp(26px,8vw,36px);}
+  h2{font-size:clamp(22px,7vw,30px);}
+  button,.button,.btn,input[type="submit"]{min-height:44px;}
+}
+</style>
 </head>
 <body>
 <header>

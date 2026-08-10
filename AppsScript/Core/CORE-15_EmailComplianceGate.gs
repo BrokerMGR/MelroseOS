@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MelroseOS Enterprise Core
  * File: CORE-15_EmailComplianceGate.gs
  * Release: MOS5-CORE-15
@@ -33,7 +33,7 @@
  *   MGR_EMAIL_setUnsubscribeBaseUrl('https://script.google.com/macros/s/.../exec')
  */
 
-const MGR_EMAIL_COMPLIANCE_VERSION = '1.4.1';
+const MGR_EMAIL_COMPLIANCE_VERSION = '1.5.2';
 
 const MGR_EMAIL_BUSINESS_CARD_FILE_ID =
   '1jqKjYqgOB9B_r5owweR-b9q9SyFDlfR5';
@@ -466,6 +466,34 @@ function MGR_EMAIL_complianceDiagnostics() {
  * Global email branding must use ASCII-only decorative separators.
  * Approved header subtitle: REAL ESTATE | LOUISIANA
  */
+
+const MGR_EMAIL_RESPONSIVE_STYLE_V2 =
+  '<style>' +
+  'html,body{margin:0!important;padding:0!important;width:100%!important;}' +
+  'body{min-width:100%!important;-webkit-text-size-adjust:100%!important;-ms-text-size-adjust:100%!important;}' +
+  'table{border-spacing:0!important;border-collapse:collapse!important;}' +
+  'img{border:0!important;outline:none!important;text-decoration:none!important;max-width:100%!important;height:auto!important;}' +
+  '.mgr-shell{width:100%!important;max-width:680px!important;}' +
+  '.mgr-content{padding:34px 34px 18px 34px!important;}' +
+  '.mgr-button{display:inline-block!important;box-sizing:border-box!important;}' +
+  '@media only screen and (max-width:720px){' +
+  '.mgr-shell{width:100%!important;max-width:100%!important;border-radius:10px!important;}' +
+  '.mgr-header{padding:20px 18px!important;}' +
+  '.mgr-header-title{font-size:24px!important;line-height:1.2!important;}' +
+  '.mgr-header-subtitle{font-size:11px!important;letter-spacing:.8px!important;}' +
+  '.mgr-content{padding:26px 22px 14px 22px!important;font-size:16px!important;line-height:1.6!important;}' +
+  '.mgr-actions,.mgr-actions tbody,.mgr-actions tr,.mgr-actions td{display:block!important;width:100%!important;max-width:100%!important;}' +
+  '.mgr-button{display:block!important;width:100%!important;max-width:100%!important;margin:8px 0!important;text-align:center!important;}' +
+  '.mgr-card-wrap{padding:0 18px 20px 18px!important;}' +
+  '.mgr-footer{padding:18px 20px 22px 20px!important;}' +
+  '}' +
+  '@media only screen and (max-width:480px){' +
+  '.mgr-content{padding:22px 16px 12px 16px!important;font-size:15px!important;}' +
+  '.mgr-header-title{font-size:22px!important;}' +
+  '.mgr-card-wrap img{width:100%!important;max-width:100%!important;}' +
+  '}' +
+  '</style>';
+
 function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
   const postal = MGR_EMAIL_getSetting_(
     MGR_EMAIL_CFG.PROPERTY_POSTAL_ADDRESS,
@@ -484,6 +512,7 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '<!doctype html>',
     '<html>',
     '<head>',
+    MGR_EMAIL_RESPONSIVE_STYLE_V2,
     '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
     '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">',
     '</head>',
@@ -497,18 +526,18 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     'style="width:100%;background:#eef2f6;margin:0;padding:0;">',
     '<tr><td align="center" style="padding:28px 12px;">',
 
-    '<table role="presentation" width="680" cellspacing="0" cellpadding="0" border="0" ',
+    '<table class="mgr-shell" role="presentation" width="680" cellspacing="0" cellpadding="0" border="0" ',
     'style="width:100%;max-width:680px;background:#ffffff;border-collapse:separate;',
     'border-spacing:0;border-radius:14px;overflow:hidden;',
     'box-shadow:0 8px 28px rgba(15,32,55,0.10);">',
 
     '<tr>',
-    '<td style="background:#10243d;padding:22px 28px;text-align:center;">',
-    '<div style="font-family:Georgia,Times New Roman,serif;font-size:26px;',
+    '<td class="mgr-header" style="background:#10243d;padding:22px 28px;text-align:center;">',
+    '<div class="mgr-header-title" style="font-family:Georgia,Times New Roman,serif;font-size:26px;',
     'line-height:1.2;color:#ffffff;font-weight:bold;letter-spacing:.3px;">',
     'Melrose Group Realty',
     '</div>',
-    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',
+    '<div class="mgr-header-subtitle" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',
     'line-height:1.5;color:#d7bd79;margin-top:6px;letter-spacing:1.2px;',
     'text-transform:uppercase;">',
     'REAL ESTATE | LOUISIANA',
@@ -521,7 +550,7 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '</tr>',
 
     '<tr>',
-    '<td style="padding:34px 34px 18px 34px;',
+    '<td class="mgr-content" style="padding:34px 34px 18px 34px;',
     'font-family:Arial,Helvetica,sans-serif;',
     'font-size:16px;line-height:1.65;color:#26364a;">',
     contentHtml,
@@ -535,14 +564,14 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '<td align="center" style="padding:0 0 10px 0;">',
 
     '<a href="' + MGR_EMAIL_escapeAttr_(urls.consultation) + '" ',
-    'style="display:inline-block;background:#10243d;color:#ffffff;',
+    'class="mgr-button" style="display:inline-block;background:#10243d;color:#ffffff;',
     'font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;',
     'text-decoration:none;padding:12px 18px;border-radius:6px;margin:4px;">',
     'Schedule Consultation',
     '</a>',
 
     '<a href="' + MGR_EMAIL_escapeAttr_(urls.academy) + '" ',
-    'style="display:inline-block;background:#c7a35a;color:#10243d;',
+    'class="mgr-button" style="display:inline-block;background:#c7a35a;color:#10243d;',
     'font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;',
     'text-decoration:none;padding:12px 18px;border-radius:6px;margin:4px;">',
     'Request Academy Access',
@@ -565,7 +594,7 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '</tr>',
 
     '<tr>',
-    '<td style="padding:0 28px 22px 28px;text-align:center;">',
+    '<td class="mgr-card-wrap" style="padding:0 28px 22px 28px;text-align:center;">',
     '<img src="cid:mgrBusinessCard" alt="Melrose Group Realty business card" ',
     'style="display:block;max-width:430px;width:100%;height:auto;',
     'margin:0 auto;border:0;border-radius:8px;">',
@@ -573,7 +602,7 @@ function MGR_EMAIL_wrapCompliantHtml_(contentHtml, urls, message) {
     '</tr>',
 
     '<tr>',
-    '<td style="background:#f7f8fa;border-top:1px solid #e1e6eb;',
+    '<td class="mgr-footer" style="background:#f7f8fa;border-top:1px solid #e1e6eb;',
     'padding:20px 28px 24px 28px;text-align:center;">',
 
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;',

@@ -3,7 +3,54 @@
 <head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{margin:0;font-family:Arial,sans-serif;background:#f5f3ef;color:#1f2933}header{background:#0c1b2a;color:#fff;padding:24px}.wrap{max-width:1100px;margin:auto;padding:20px}.card{background:#fff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 4px 18px rgba(0,0,0,.08)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}.btn{background:#0c1b2a;color:#fff;border:0;border-radius:8px;padding:11px 15px;cursor:pointer;text-decoration:none;display:inline-block}.gold{background:#b99a56;color:#111}.muted{color:#667085;font-size:13px}.hidden{display:none}.warning{background:#fff7e6;border-left:4px solid #b99a56;padding:12px;font-size:12px}input{width:100%;padding:9px;margin:4px 0 10px}.vendor img{max-width:90px;max-height:90px;border-radius:10px}
-</style></head>
+</style><style id="mgr-responsive-system-v3">
+:root{
+  --mgr-max:1200px;
+  --mgr-gutter:clamp(16px,3vw,32px);
+}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{width:100%;max-width:100%;overflow-x:hidden;}
+body{margin:0;}
+img,svg,video,canvas,iframe{max-width:100%;height:auto;}
+table{max-width:100%;}
+input,select,textarea,button{max-width:100%;font:inherit;}
+button,a{-webkit-tap-highlight-color:transparent;}
+.mgr-container,.container,.wrapper,.portal-shell,.portal-container{
+  width:min(100% - (2 * var(--mgr-gutter)),var(--mgr-max));
+  margin-left:auto;
+  margin-right:auto;
+}
+.mgr-grid{
+  display:grid;
+  gap:clamp(14px,2vw,24px);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));
+}
+.mgr-flex-wrap{display:flex;flex-wrap:wrap;gap:clamp(10px,2vw,20px);}
+@media (max-width:1024px){.mgr-hide-tablet{display:none!important;}}
+@media (max-width:768px){
+  .mgr-stack-mobile,.mgr-stack-mobile>*{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+  table.mgr-responsive-table{
+    display:block;
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .mgr-mobile-center{text-align:center!important;}
+}
+@media (max-width:480px){
+  :root{--mgr-gutter:14px;}
+  body{font-size:15px;}
+  h1{font-size:clamp(26px,8vw,36px);}
+  h2{font-size:clamp(22px,7vw,30px);}
+  button,.button,.btn,input[type="submit"]{min-height:44px;}
+}
+</style>
+</head>
 <body>
 <header><div class="wrap"><h1>Melrose Group Realty Client Portal</h1><div id="welcome">Loading your personalized dashboard...</div></div></header>
 <div class="wrap"><div id="error" class="card hidden"></div><div id="portal" class="hidden">
