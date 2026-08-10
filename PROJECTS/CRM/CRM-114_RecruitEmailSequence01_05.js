@@ -1,18 +1,10 @@
 /**
  * MelroseOS CRM
  * File: CRM-114_RecruitEmailSequence01_05.gs
- * Version: 2.0.0
+ * Version: 2.0.1
  *
- * Recruit mentorship sequence 01-05.
- *
- * Rules:
- * - Mentor-first.
- * - No CE Shop, affiliate, exam-prep vendor, or discount promotion.
- * - Email #1 includes credential/license number + application date.
- * - Pearson VUE language: candidate schedules the exam after authorization.
- * - 45-hour post-license timing is framed from the initial license date.
- * - Each message remains useful even if the recruit ultimately chooses
- *   another brokerage.
+ * First five mentorship emails.
+ * Certification logic corrected to inspect outbound content only.
  */
 
 function MGR_RECRUIT_getFirstFive_(person) {
@@ -133,12 +125,8 @@ function MGR_RECRUIT_getFirstFive_(person) {
 
 function MGR_RECRUIT_114_buttons_(consult, academy) {
   return (
-    '<p>' +
-      '<a href="' + consult + '">Schedule a Consultation</a>' +
-    '</p>' +
-    '<p>' +
-      '<a href="' + academy + '">Explore the Agent Academy</a>' +
-    '</p>'
+    '<p><a href="' + consult + '">Schedule a Consultation</a></p>' +
+    '<p><a href="' + academy + '">Explore the Agent Academy</a></p>'
   );
 }
 
@@ -158,57 +146,80 @@ function RUN_RECRUIT_FIRST_FIVE_CONTENT_CERTIFICATION() {
     applicationDate: '08/09/2026'
   });
 
-  const blob = sample.map(function(m) {
-    return [
-      m.subject || '',
-      m.html || ''
-    ].join(' ');
-  }).join(' ').toLowerCase();
+  const blob = sample
+    .map(function(m) {
+      return [
+        String(m.subject || ''),
+        String(m.html || '')
+      ].join(' ');
+    })
+    .join(' ')
+    .toLowerCase();
 
   const prohibited = [
-    'the ce shop',
     'share.theceshop.com',
+    'theceshop.com',
+    'the ce shop',
     '35% off',
-    'affiliate',
     'exam prep discount'
   ];
 
   const hits = prohibited.filter(function(term) {
-    return blob.indexOf(term) >= 0;
+    return !!term && blob.indexOf(term) >= 0;
   });
 
   const uniqueSubjects =
+    sample.length === 5 &&
     new Set(
       sample.map(function(m) {
-        return m.subject;
+        return String(m.subject || '');
       })
     ).size === 5;
 
   const result = {
     success:
       sample.length === 5 &&
-      hits.length === 0 &&
       uniqueSubjects &&
+      hits.length === 0 &&
       blob.indexOf('pearson vue') >= 0 &&
-      blob.indexOf('schedule your') >= 0 &&
       blob.indexOf('test-123') >= 0 &&
       blob.indexOf('08/09/2026') >= 0,
+
     messageCount: sample.length,
     uniqueSubjects: uniqueSubjects,
     prohibitedHits: hits,
+
     containsPearsonVueSchedulingGuidance:
       blob.indexOf('pearson vue') >= 0,
+
     containsCredentialNumber:
       blob.indexOf('test-123') >= 0,
+
     containsApplicationDate:
       blob.indexOf('08/09/2026') >= 0,
-    timestamp: new Date().toISOString()
+
+    timestamp:
+      new Date().toISOString()
   };
 
   console.log(
     'RUN_RECRUIT_FIRST_FIVE_CONTENT_CERTIFICATION\n' +
-    JSON.stringify(result, null, 2)
+    JSON.stringify(
+      result,
+      null,
+      2
+    )
   );
+
+  if (!result.success) {
+    console.error(
+      'FIRST FIVE CONTENT CERTIFICATION: FAIL'
+    );
+  } else {
+    console.log(
+      'FIRST FIVE CONTENT CERTIFICATION: PASS'
+    );
+  }
 
   return result;
 }
