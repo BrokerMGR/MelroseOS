@@ -60,8 +60,16 @@ function MGR_RECRUIT_sendFirstFiveTestsToBroker() {
   const lead = {firstName:'Ulysses', credentialNumber:'[TEST - Credential Number]', applicationDate:'[TEST - Application Date]'};
   const messages = MGR_RECRUIT_getFirstFive_(lead);
   messages.forEach(function(message, i) {
-    if (typeof MGR_EMAIL_sendCompliant !== 'function') throw new Error('MGR_EMAIL_sendCompliant is required.');
-    MGR_EMAIL_sendCompliant({
+    if (
+      typeof MGRCORE === 'undefined' ||
+      typeof MGRCORE.MGR_EMAIL_sendCompliant !== 'function'
+    ) {
+      throw new Error(
+        'MGRCORE library is required for compliant email delivery.'
+      );
+    }
+
+    MGRCORE.MGRCORE.MGRCORE.MGR_EMAIL_sendCompliant({
       to:recipient,
       subject:'[RECRUIT TEST ' + (i+1) + '/5] ' + message.subject,
       htmlBody:message.html,
