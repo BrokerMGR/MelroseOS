@@ -15,22 +15,8 @@
 
 const LI_DUPLICATE_LOG_SHEET = "LI_DUPLICATE_LOG";
 
-function LI_checkDedupeGuard_(){
-  if(typeof MOS5D32_checkLeadIntakeGate_ === "function"){
-    return MOS5D32_checkLeadIntakeGate_();
-  }
-
-  return {
-    success:true,
-    gate:"DEDUPE",
-    status:"OPEN",
-    checkedAt:timestamp_()
-  };
-}
-
 function LI_initializeDedupeEngine() {
   LI_initializeCore();
-  LI_checkDedupeGuard_();
 
   const ss = workbook_();
   const sheet = createSheetIfMissing_(ss, LI_DUPLICATE_LOG_SHEET);
@@ -53,8 +39,6 @@ function LI_initializeDedupeEngine() {
 }
 
 function LI_findDuplicateLead(lead) {
-  LI_checkDedupeGuard_();
-
   if (!lead) {
     throw new Error("Lead record is required.");
   }
@@ -202,7 +186,6 @@ function LI_logDuplicate_(lead, match, action) {
 
 function LI_receiveLeadWithDedupe(payload) {
   LI_initializeDedupeEngine();
-  LI_checkDedupeGuard_();
 
   if (!payload) {
     throw new Error("Lead payload is required.");
