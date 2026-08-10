@@ -18,7 +18,7 @@
  * - actual compliant delivery through the CORE library
  */
 
-const MGR_SENDER_POOL_VERSION = '1.0.0';
+const MGR_SENDER_POOL_VERSION = '1.1.0';
 
 const MGR_SENDER_POOL = Object.freeze({
   CRM_WORKBOOK_ID:
@@ -216,11 +216,19 @@ function MGR_SENDER_enqueue(message) {
     };
   }
 
+  const campaign =
+    String(m.campaign || '').trim();
+
+  const initialStatus =
+    campaign === 'RECRUIT_MENTORSHIP'
+      ? 'LREC_PENDING_CERTIFICATION'
+      : 'PENDING';
+
   outbox.appendRow([
     messageId,
     dedupeKey,
     now,
-    'PENDING',
+    initialStatus,
     '',
     '',
     0,
@@ -280,7 +288,17 @@ function MGR_SENDER_routePendingQueue() {
     const status =
       String(row[3] || '').toUpperCase();
 
-    if (
+    const campaign =
+      String(row[12] || '').trim();
+
+    const isRecruit =
+      campaign === 'RECRUIT_MENTORSHIP';
+
+    if (isRecruit) {
+      if (status !== 'LREC_CERTIFIED') {
+        return;
+      }
+    } else if (
       status !== 'PENDING' &&
       status !== 'REQUEUE'
     ) {
